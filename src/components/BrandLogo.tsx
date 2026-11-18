@@ -13,7 +13,7 @@ interface BrandLogoProps {
  * oppure passa la prop `logoUrl`.
  */
 export const BrandLogo: React.FC<BrandLogoProps> = ({
-  logoUrl = '/logo-lista1.png',
+  logoUrl = `${import.meta.env.BASE_URL}logo-lista1.png`,
   variant = 'light',
   showTag = true,
 }) => {
