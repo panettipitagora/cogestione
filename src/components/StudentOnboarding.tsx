@@ -1,24 +1,36 @@
 import React, { useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, GraduationCap, HelpCircle, Send, X } from 'lucide-react';
-import type { UserProfile } from '../types';
+import {
+  AlertCircle,
+  Building2,
+  CheckCircle2,
+  GraduationCap,
+  HelpCircle,
+  Send,
+  X,
+} from 'lucide-react';
+import { CLASSI_PANETTI, CLASSI_PITAGORA, getClassesForSede } from '../data/schoolData';
+import type { SedeIstituto, UserProfile } from '../types';
 import { groupClassesByYear } from '../utils/tournamentUtils';
 import { BrandLogo } from './BrandLogo';
 import { Footer } from './Footer';
 
 interface StudentOnboardingProps {
   user: UserProfile;
-  onConfirmClass: (classe: string) => Promise<void>;
+  onConfirmRegistration: (sede: SedeIstituto, classe: string) => Promise<void>;
   onReportTeacher: (note: string) => Promise<void>;
   onLogout: () => void;
 }
 
 export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({
   user,
-  onConfirmClass,
+  onConfirmRegistration,
   onReportTeacher,
   onLogout,
 }) => {
-  const [selectedClass, setSelectedClass] = useState('');
+  const isTeacher = user.role === 'docente';
+
+  const [selectedSede, setSelectedSede] = useState<'' | SedeIstituto>(user.sede || '');
+  const [selectedClass, setSelectedClass] = useState(user.classe || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,20 +39,42 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({
   const [reportSent, setReportSent] = useState(false);
   const [reportSending, setReportSending] = useState(false);
 
-  const yearGroups = useMemo(() => groupClassesByYear(), []);
+  const availableClasses = useMemo(() => {
+    if (!selectedSede) return [];
+    return getClassesForSede(selectedSede);
+  }, [selectedSede]);
+
+  const yearGroups = useMemo(
+    () => groupClassesByYear(availableClasses),
+    [availableClasses]
+  );
+
+  const handleSelectSede = (sede: SedeIstituto) => {
+    setSelectedSede(sede);
+    setSelectedClass('');
+    setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedClass) {
+    if (!selectedSede) {
+      setError('Seleziona la tua sede di appartenenza (Panetti o Pitagora).');
+      return;
+    }
+    if (!isTeacher && !selectedClass) {
       setError('Seleziona la tua classe prima di continuare.');
       return;
     }
     setError(null);
     setSaving(true);
     try {
-      await onConfirmClass(selectedClass);
+      await onConfirmRegistration(selectedSede, isTeacher ? '' : selectedClass);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Errore durante il salvataggio della classe.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Errore durante il salvataggio della registrazione.'
+      );
       setSaving(false);
     }
   };
@@ -49,7 +83,9 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({
     e.preventDefault();
     setReportSending(true);
     try {
-      await onReportTeacher(reportNote.trim() || 'Docente non riconosciuto automaticamente al primo login.');
+      await onReportTeacher(
+        reportNote.trim() || 'Docente non riconosciuto automaticamente al primo login.'
+      );
       setReportSent(true);
     } finally {
       setReportSending(false);
@@ -82,37 +118,107 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({
               Benvenuto, {user.displayName}
             </h1>
             <p className="text-sm text-zinc-600">
-              Account verificato: <span className="font-mono text-xs text-[#09090B]">{user.email}</span>. Seleziona la tua classe di appartenenza per accedere al programma personalizzato e alle convocazioni.
+              Account verificato: <span className="font-mono text-xs text-[#09090B]">{user.email}</span>.{' '}
+              {isTeacher
+                ? 'Seleziona la tua sede di servizio per visualizzare esclusivamente le classi e i tornei della tua sede.'
+                : 'Seleziona prima la tua sede (Panetti o Pitagora) e poi la tua classe di appartenenza.'}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Step 1: Sede Istituto */}
             <div className="space-y-2">
-              <label
-                htmlFor="onboarding-classe-select"
-                className="block text-sm font-display font-bold text-[#09090B]"
-              >
-                Seleziona la tua Classe (47 classi ufficiali)
-              </label>
-              <select
-                id="onboarding-classe-select"
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-xl border border-zinc-300 bg-white text-sm font-semibold text-[#09090B] focus:outline-none focus:ring-2 focus:ring-[#FF5500] focus:border-[#FF5500]"
-              >
-                <option value="">-- Seleziona Classe --</option>
-                {yearGroups.map((group) => (
-                  <optgroup key={group.year} label={group.label}>
-                    {group.classes.map((cls) => (
-                      <option key={cls} value={cls}>
-                        {cls}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+              <span className="block text-sm font-display font-bold text-[#09090B]">
+                1. Seleziona la tua Sede
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleSelectSede('Panetti')}
+                  aria-pressed={selectedSede === 'Panetti'}
+                  className={`p-4 rounded-xl border text-left transition-colors cursor-pointer space-y-1 ${
+                    selectedSede === 'Panetti'
+                      ? 'surface-active-orange border-[#FF5500] ring-1 ring-[#FF5500]'
+                      : 'bg-[#F8FAFC] border-zinc-200 hover:border-zinc-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-display font-extrabold text-base text-[#09090B]">
+                      Sede Panetti
+                    </span>
+                    <Building2
+                      className={`w-4 h-4 ${
+                        selectedSede === 'Panetti' ? 'text-[#FF5500]' : 'text-zinc-400'
+                      }`}
+                    />
+                  </div>
+                  <p className="text-xs text-zinc-500">
+                    {CLASSI_PANETTI.length} classi (1C–2L, ITCM, ITEC, ITET, ITIA)
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectSede('Pitagora')}
+                  aria-pressed={selectedSede === 'Pitagora'}
+                  className={`p-4 rounded-xl border text-left transition-colors cursor-pointer space-y-1 ${
+                    selectedSede === 'Pitagora'
+                      ? 'surface-active-orange border-[#FF5500] ring-1 ring-[#FF5500]'
+                      : 'bg-[#F8FAFC] border-zinc-200 hover:border-zinc-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-display font-extrabold text-base text-[#09090B]">
+                      Sede Pitagora
+                    </span>
+                    <Building2
+                      className={`w-4 h-4 ${
+                        selectedSede === 'Pitagora' ? 'text-[#FF5500]' : 'text-zinc-400'
+                      }`}
+                    />
+                  </div>
+                  <p className="text-xs text-zinc-500">
+                    {CLASSI_PITAGORA.length} classi (1A, 1B, 1M, 2A, 2B e classi ITCA)
+                  </p>
+                </button>
+              </div>
             </div>
+
+            {/* Step 2: Classe (solo Studenti) */}
+            {!isTeacher && (
+              <div className="space-y-2">
+                <label
+                  htmlFor="onboarding-classe-select"
+                  className="block text-sm font-display font-bold text-[#09090B]"
+                >
+                  2. Seleziona la tua Classe{' '}
+                  {selectedSede ? `(${availableClasses.length} classi Sede ${selectedSede})` : ''}
+                </label>
+                <select
+                  id="onboarding-classe-select"
+                  value={selectedClass}
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  disabled={!selectedSede}
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-300 bg-white disabled:bg-zinc-100 disabled:text-zinc-400 text-sm font-semibold text-[#09090B] focus:outline-none focus:ring-2 focus:ring-[#FF5500] focus:border-[#FF5500]"
+                >
+                  <option value="">
+                    {selectedSede
+                      ? `-- Seleziona Classe (${selectedSede}) --`
+                      : '-- Prima scegli Panetti o Pitagora --'}
+                  </option>
+                  {yearGroups.map((group) => (
+                    <optgroup key={group.year} label={group.label}>
+                      {group.classes.map((cls) => (
+                        <option key={cls} value={cls}>
+                          {cls}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div
               role="note"
@@ -120,7 +226,8 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({
             >
               <AlertCircle className="w-5 h-5 text-[#FF5500] shrink-0 mt-0.5" />
               <p className="text-xs sm:text-sm text-[#09090B] leading-relaxed">
-                <strong>Attenzione:</strong> una volta confermata, la classe non potrà essere modificata autonomamente. In caso di errore contatta lo Staff EN-CORE.
+                <strong>Attenzione:</strong> una volta confermata,{' '}
+                {isTeacher ? 'la sede' : 'la sede e la classe'} non potranno essere modificate autonomamente. In caso di errore contatta lo Staff EN-CORE.
               </p>
             </div>
 
@@ -132,26 +239,32 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({
 
             <button
               type="submit"
-              disabled={saving || !selectedClass}
+              disabled={saving || !selectedSede || (!isTeacher && !selectedClass)}
               className="w-full py-3.5 px-5 rounded-xl bg-[#FF5500] hover:bg-[#FF7A00] disabled:opacity-50 text-white font-display font-bold text-sm transition-colors cursor-pointer"
             >
-              {saving ? 'Salvataggio in corso...' : 'Conferma Classe e Entra nel Portale'}
+              {saving
+                ? 'Salvataggio in corso...'
+                : isTeacher
+                ? 'Conferma Sede e Entra nel Portale'
+                : 'Conferma Sede e Classe e Entra nel Portale'}
             </button>
           </form>
 
-          <div className="pt-4 border-t border-zinc-200 flex items-center justify-center">
-            <button
-              type="button"
-              onClick={() => {
-                setReportSent(false);
-                setReportModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-[#09090B] underline underline-offset-4 cursor-pointer"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>Sei un docente non riconosciuto automaticamente?</span>
-            </button>
-          </div>
+          {!isTeacher && (
+            <div className="pt-4 border-t border-zinc-200 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setReportSent(false);
+                  setReportModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-[#09090B] underline underline-offset-4 cursor-pointer"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>Sei un docente non riconosciuto automaticamente?</span>
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
@@ -182,7 +295,8 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({
                 <div className="flex items-start gap-3 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
                   <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
                   <p className="text-sm">
-                    Segnalazione inviata allo Staff Lista 1 EN-CORE. Il tuo account <strong className="font-mono text-xs">{user.email}</strong> verrà abilitato come Docente al più presto.
+                    Segnalazione inviata allo Staff Lista 1 EN-CORE. Il tuo account{' '}
+                    <strong className="font-mono text-xs">{user.email}</strong> verrà abilitato come Docente al più presto.
                   </p>
                 </div>
                 <button
@@ -196,7 +310,8 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({
             ) : (
               <form onSubmit={handleReportSubmit} className="space-y-4">
                 <p className="text-sm text-zinc-600">
-                  Se la tua email istituzionale usa un formato diverso dallo standard <span className="font-mono text-xs">nome.cognome</span>, invia una segnalazione allo Staff per l&apos;abilitazione manuale.
+                  Se la tua email istituzionale usa un formato diverso dallo standard{' '}
+                  <span className="font-mono text-xs">nome.cognome</span>, invia una segnalazione allo Staff per l&apos;abilitazione manuale.
                 </p>
                 <div>
                   <label htmlFor="teacher-report-note" className="block text-xs font-semibold text-zinc-700 mb-1">

@@ -16,8 +16,9 @@ import {
   isFirebaseConfigured,
   testConnection,
 } from './firebase';
+import { isSuperAdminEmail } from './data/schoolData';
 import {
-  confirmStudentClassDoc,
+  confirmUserOnboardingDoc,
   createUserProfileDoc,
   deleteAttivitaClasseDoc,
   deleteConvocazioneDoc,
@@ -48,6 +49,7 @@ import type {
   ImpostazioniEvento,
   PartitaTorneo,
   PreRole,
+  SedeIstituto,
   SegnalazioneDocente,
   UserProfile,
 } from './types';
@@ -222,19 +224,6 @@ function AppShell() {
     }
   };
 
-  const handleSelectDemo = (preset: DemoPresetId) => {
-    setAuthError(null);
-    setIsDemoMode(true);
-    setCurrentUser({ ...DEMO_PRESET_MAP[preset] });
-    if (preset === 'arbitro_pallavolo') {
-      setActiveView('arbitro');
-    } else if (preset === 'staff_admin') {
-      setActiveView('staff');
-    } else {
-      setActiveView('dashboard');
-    }
-  };
-
   const handleLogout = async () => {
     setActiveView('dashboard');
     if (isDemoMode) {
@@ -250,17 +239,17 @@ function AppShell() {
 
   // --- MUTATION HANDLERS (Demo Local State OR Cloud Firestore) ---
 
-  const handleConfirmClass = async (classe: string) => {
+  const handleConfirmRegistration = async (sede: SedeIstituto, classe: string) => {
     if (!currentUser) return;
     if (isDemoMode) {
-      setCurrentUser({ ...currentUser, classe });
+      setCurrentUser({ ...currentUser, sede, classe });
       setUsersList((prev) =>
-        prev.map((u) => (u.uid === currentUser.uid ? { ...u, classe } : u))
+        prev.map((u) => (u.uid === currentUser.uid ? { ...u, sede, classe } : u))
       );
       return;
     }
-    await confirmStudentClassDoc(currentUser.uid, classe, currentUser.displayName);
-    setCurrentUser({ ...currentUser, classe });
+    await confirmUserOnboardingDoc(currentUser.uid, sede, classe, currentUser.displayName);
+    setCurrentUser({ ...currentUser, sede, classe });
   };
 
   const handleReportTeacher = async (note: string) => {
@@ -346,20 +335,31 @@ function AppShell() {
 
   const handleUpdateUser = async (
     uid: string,
-    updates: Partial<Pick<UserProfile, 'classe' | 'role' | 'isStaff' | 'arbitroTornei' | 'displayName'>>
+    updates: Partial<Pick<UserProfile, 'sede' | 'classe' | 'role' | 'isStaff' | 'arbitroTornei' | 'displayName'>>
   ) => {
+    const targetUser = usersList.find((u) => u.uid === uid);
+    const safeUpdates =
+      targetUser && isSuperAdminEmail(targetUser.email)
+        ? {
+            ...updates,
+            isStaff: true,
+            arbitroTornei: [],
+            role: targetUser.role,
+          }
+        : updates;
+
     if (isDemoMode) {
       setUsersList((prev) =>
-        prev.map((u) => (u.uid === uid ? { ...u, ...updates } : u))
+        prev.map((u) => (u.uid === uid ? { ...u, ...safeUpdates } : u))
       );
       if (currentUser && currentUser.uid === uid) {
-        setCurrentUser({ ...currentUser, ...updates });
+        setCurrentUser({ ...currentUser, ...safeUpdates });
       }
       return;
     }
-    await staffUpdateUserDoc(uid, updates);
+    await staffUpdateUserDoc(uid, safeUpdates);
     if (currentUser && currentUser.uid === uid) {
-      setCurrentUser({ ...currentUser, ...updates });
+      setCurrentUser({ ...currentUser, ...safeUpdates });
     }
   };
 
@@ -461,7 +461,6 @@ function AppShell() {
     return (
       <LoginView
         onGoogleLogin={handleGoogleLogin}
-        onSelectDemo={handleSelectDemo}
         authError={authError}
         isLoading={loginPending}
         isFirebaseConfigured={isFirebaseConfigured}
@@ -469,12 +468,16 @@ function AppShell() {
     );
   }
 
-  // First-time student onboarding (blocking until class is selected)
-  if (currentUser.role === 'studente' && !currentUser.classe && !currentUser.isStaff) {
+  // First-time onboarding (blocking until sede is selected, plus classe for students)
+  const needsOnboarding =
+    !currentUser.isStaff &&
+    (!currentUser.sede || (currentUser.role === 'studente' && !currentUser.classe));
+
+  if (needsOnboarding) {
     return (
       <StudentOnboarding
         user={currentUser}
-        onConfirmClass={handleConfirmClass}
+        onConfirmRegistration={handleConfirmRegistration}
         onReportTeacher={handleReportTeacher}
         onLogout={handleLogout}
       />

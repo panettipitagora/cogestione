@@ -11,7 +11,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { CLASSI_ISTITUTO, GIORNI_EVENTO } from '../data/schoolData';
+import { CLASSI_ISTITUTO, GIORNI_EVENTO, getClassesForSede } from '../data/schoolData';
 import type {
   AttivitaClasse,
   ConvocazioneTorneo,
@@ -48,16 +48,21 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [detailDay, setDetailDay] = useState<GiornoEvento>(1);
 
-  const yearGroups = useMemo(() => groupClassesByYear(), []);
+  const sedeClasses = useMemo(
+    () => (user.sede ? getClassesForSede(user.sede) : CLASSI_ISTITUTO),
+    [user.sede]
+  );
+
+  const yearGroups = useMemo(() => groupClassesByYear(sedeClasses), [sedeClasses]);
 
   const filteredClasses = useMemo(() => {
     const q = searchClass.trim().toLowerCase();
-    return CLASSI_ISTITUTO.filter((cls) => {
+    return sedeClasses.filter((cls) => {
       if (yearFilter !== 'Tutte' && !cls.startsWith(String(yearFilter))) return false;
       if (q && !cls.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [yearFilter, searchClass]);
+  }, [sedeClasses, yearFilter, searchClass]);
 
   const classDetailData = useMemo(() => {
     if (!selectedClass) return null;
@@ -90,6 +95,11 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               <span className="inline-flex items-center px-3 py-1 rounded-md bg-[#FF5500] text-white font-display text-xs font-extrabold tracking-wider uppercase">
                 DOCENTE
               </span>
+              {user.sede && (
+                <span className="inline-flex items-center px-3 py-1 rounded-md bg-white/15 border border-white/20 text-white font-display text-xs font-extrabold tracking-wider uppercase">
+                  SEDE {user.sede}
+                </span>
+              )}
               <span className="text-xs font-mono text-zinc-300">{user.email}</span>
             </div>
           </div>
@@ -117,7 +127,11 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           }`}
         >
           <BookOpen className="w-4 h-4 text-[#FF5500] shrink-0" />
-          <span>Tutte le Classi (47)</span>
+          <span>
+            {user.sede
+              ? `Classi Sede ${user.sede} (${sedeClasses.length})`
+              : `Tutte le Classi (${sedeClasses.length})`}
+          </span>
         </button>
 
         <button
@@ -148,7 +162,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                     : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
                 }`}
               >
-                Tutte (47)
+                Tutte ({sedeClasses.length})
               </button>
               {yearGroups.map((g) => (
                 <button
@@ -176,13 +190,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                 type="search"
                 value={searchClass}
                 onChange={(e) => setSearchClass(e.target.value)}
-                placeholder="Cerca classe (es. 4 ITIA_A)..."
+                placeholder={user.sede === 'Pitagora' ? 'Cerca classe (es. 4 ITCA_A)...' : 'Cerca classe (es. 4 ITIA_A)...'}
                 className="w-full pl-9 pr-3 py-2 rounded-lg border border-zinc-200 text-sm text-[#09090B] placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#FF5500]"
               />
             </div>
           </div>
 
-          {/* 47 Classes Interactive Grid */}
+          {/* Sede Classes Interactive Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {filteredClasses.map((cls) => {
               const callupsCount = convocazioni.filter((c) => c.classe === cls).length;
@@ -212,7 +226,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           </div>
         </div>
       ) : (
-        <LiveScoreboard partite={partite} />
+        <LiveScoreboard partite={partite} sedeFilter={user.sede} />
       )}
 
       {/* Class Detail Modal */}

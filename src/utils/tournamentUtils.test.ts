@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { CLASSI_PANETTI, CLASSI_PITAGORA } from '../data/schoolData';
 import type { ConvocazioneTorneo, PartitaTorneo } from '../types';
 import {
   adjustMatchScore,
@@ -13,7 +14,7 @@ import {
   validateNonMixedMatchInput,
 } from './tournamentUtils';
 
-test('groupClassesByYear groups all 47 classes into 5 years', () => {
+test('groupClassesByYear groups all 47 classes into 5 years and filters empty groups per sede', () => {
   const grouped = groupClassesByYear();
   assert.equal(grouped.length, 5);
   assert.equal(grouped[0].classes.length, 11); // 1A..1M
@@ -21,6 +22,12 @@ test('groupClassesByYear groups all 47 classes into 5 years', () => {
   assert.equal(grouped[2].classes.length, 10); // 3*
   assert.equal(grouped[3].classes.length, 8);  // 4*
   assert.equal(grouped[4].classes.length, 8);  // 5*
+
+  const pitagoraGrouped = groupClassesByYear(CLASSI_PITAGORA);
+  assert.equal(pitagoraGrouped.reduce((sum, g) => sum + g.classes.length, 0), 12);
+
+  const panettiGrouped = groupClassesByYear(CLASSI_PANETTI);
+  assert.equal(panettiGrouped.reduce((sum, g) => sum + g.classes.length, 0), 35);
 });
 
 test('roll call and student callup formatters produce exact required phrasing', () => {

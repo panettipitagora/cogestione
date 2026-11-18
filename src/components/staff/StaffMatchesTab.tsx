@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Pencil, Trash2, Trophy } from 'lucide-react';
+import { Minus, Pencil, Plus, Trash2, Trophy } from 'lucide-react';
 import { DISCIPLINE, FASI_TORNEO, GIORNI_EVENTO } from '../../data/schoolData';
 import type { Disciplina, GiornoEvento, MatchStatus, PartitaTorneo } from '../../types';
-import { groupClassesByYear, validateNonMixedMatchInput } from '../../utils/tournamentUtils';
+import { adjustMatchScore, groupClassesByYear, validateNonMixedMatchInput } from '../../utils/tournamentUtils';
 
 interface StaffMatchesTabProps {
   staffEmail: string;
@@ -68,6 +68,55 @@ export const StaffMatchesTab: React.FC<StaffMatchesTabProps> = ({
     setStato(p.stato);
     setNote(p.note ?? '');
     setError(null);
+  };
+
+  const handleQuickScore = async (match: PartitaTorneo, team: 'A' | 'B', delta: number) => {
+    const updated = adjustMatchScore(match, team, delta);
+    await onSavePartita(
+      {
+        id: updated.id,
+        disciplina: updated.disciplina,
+        giorno: updated.giorno,
+        fase: updated.fase,
+        oraInizio: updated.oraInizio,
+        campo: updated.campo,
+        squadraA: updated.squadraA,
+        classeA: updated.classeA,
+        squadraB: updated.squadraB,
+        classeB: updated.classeB,
+        punteggioA: updated.punteggioA,
+        punteggioB: updated.punteggioB,
+        stato: updated.stato === 'in_programma' ? 'live' : updated.stato,
+        note: updated.note ?? '',
+        visibile: true,
+        updatedBy: staffEmail,
+      },
+      false
+    );
+  };
+
+  const handleQuickStatus = async (match: PartitaTorneo, nextStatus: MatchStatus) => {
+    await onSavePartita(
+      {
+        id: match.id,
+        disciplina: match.disciplina,
+        giorno: match.giorno,
+        fase: match.fase,
+        oraInizio: match.oraInizio,
+        campo: match.campo,
+        squadraA: match.squadraA,
+        classeA: match.classeA,
+        squadraB: match.squadraB,
+        classeB: match.classeB,
+        punteggioA: match.punteggioA,
+        punteggioB: match.punteggioB,
+        stato: nextStatus,
+        note: match.note ?? '',
+        visibile: true,
+        updatedBy: staffEmail,
+      },
+      false
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -330,50 +379,121 @@ export const StaffMatchesTab: React.FC<StaffMatchesTabProps> = ({
         </form>
       </section>
 
-      {/* All Matches Supervision List */}
+      {/* All Matches Supervision List with Direct Score & Status Controls */}
       <section className="lg:col-span-7 bg-white border border-zinc-200 rounded-xl p-5 space-y-4">
-        <h2 className="font-display text-base font-extrabold text-[#09090B] pb-3 border-b border-zinc-100">
-          Supervisione Completa Tornei ({partite.length})
-        </h2>
+        <div className="pb-3 border-b border-zinc-100 space-y-1">
+          <h2 className="font-display text-base font-extrabold text-[#09090B]">
+            Supervisione Completa Tornei ({partite.length})
+          </h2>
+          <p className="text-xs text-zinc-500">
+            Lo Staff Super-Admin può creare, modificare, aggiornare i punteggi in diretta e rimuovere qualsiasi incontro senza risultare arbitro.
+          </p>
+        </div>
 
         <div className="divide-y divide-zinc-100">
           {partite.map((p) => (
-            <article key={p.id} className="py-3.5 flex items-center justify-between gap-4">
-              <div className="min-w-0 space-y-1">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-display font-bold text-[#FF5500]">{p.disciplina}</span>
-                  <span className="text-zinc-400">·</span>
-                  <span className="text-zinc-600">{p.fase}</span>
-                  <span className="text-zinc-400">·</span>
-                  <span className="font-mono text-zinc-500">G{p.giorno} {p.oraInizio}</span>
-                  {p.stato === 'live' && (
-                    <span className="px-1.5 py-0.5 rounded bg-[#FF5500] text-white text-[10px] font-bold">
-                      LIVE
-                    </span>
-                  )}
+            <article key={p.id} className="py-4 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 space-y-1">
+                  <div className="flex items-center gap-2 text-xs flex-wrap">
+                    <span className="font-display font-bold text-[#FF5500]">{p.disciplina}</span>
+                    <span className="text-zinc-400">·</span>
+                    <span className="text-zinc-600">{p.fase}</span>
+                    <span className="text-zinc-400">·</span>
+                    <span className="font-mono text-zinc-500">G{p.giorno} {p.oraInizio}</span>
+                    <span className="text-zinc-400">·</span>
+                    <span className="text-zinc-500">{p.campo}</span>
+                  </div>
+                  <p className="font-display font-bold text-sm text-[#09090B]">
+                    {p.squadraA} ({p.classeA}) <span className="font-mono px-1.5 text-[#FF5500]">{p.punteggioA} - {p.punteggioB}</span> {p.squadraB} ({p.classeB})
+                  </p>
                 </div>
-                <p className="font-display font-bold text-sm text-[#09090B]">
-                  {p.squadraA} ({p.classeA}) <span className="font-mono px-1.5">{p.punteggioA} - {p.punteggioB}</span> {p.squadraB} ({p.classeB})
-                </p>
-                <p className="text-xs text-zinc-500">{p.campo}</p>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(p)}
+                    aria-label={`Modifica partita ${p.squadraA} vs ${p.squadraB}`}
+                    className="p-2 rounded-lg text-zinc-500 hover:text-[#09090B] hover:bg-zinc-100 cursor-pointer"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeletePartita(p.id)}
+                    aria-label={`Elimina partita ${p.squadraA} vs ${p.squadraB}`}
+                    className="p-2 rounded-lg text-zinc-500 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleEdit(p)}
-                  aria-label={`Modifica partita ${p.squadraA} vs ${p.squadraB}`}
-                  className="p-2 rounded-lg text-zinc-500 hover:text-[#09090B] hover:bg-zinc-100 cursor-pointer"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDeletePartita(p.id)}
-                  aria-label={`Elimina partita ${p.squadraA} vs ${p.squadraB}`}
-                  className="p-2 rounded-lg text-zinc-500 hover:text-red-600 hover:bg-red-50 cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+
+              {/* Quick Live Controls for Staff */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-[#F8FAFC] border border-zinc-200/80 rounded-xl px-3 py-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] font-mono font-semibold text-zinc-600 mr-1">
+                      {p.classeA}:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickScore(p, 'A', -1)}
+                      aria-label={`Decrementa punteggio ${p.squadraA}`}
+                      className="p-1 rounded bg-white border border-zinc-300 hover:bg-zinc-100 cursor-pointer"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickScore(p, 'A', 1)}
+                      aria-label={`Incrementa punteggio ${p.squadraA}`}
+                      className="p-1 rounded bg-[#FF5500] text-white hover:bg-[#FF7A00] cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] font-mono font-semibold text-zinc-600 mr-1">
+                      {p.classeB}:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickScore(p, 'B', -1)}
+                      aria-label={`Decrementa punteggio ${p.squadraB}`}
+                      className="p-1 rounded bg-white border border-zinc-300 hover:bg-zinc-100 cursor-pointer"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickScore(p, 'B', 1)}
+                      aria-label={`Incrementa punteggio ${p.squadraB}`}
+                      className="p-1 rounded bg-[#FF5500] text-white hover:bg-[#FF7A00] cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {(['in_programma', 'live', 'conclusa'] as MatchStatus[]).map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => handleQuickStatus(p, st)}
+                      className={`px-2 py-1 rounded text-[11px] font-display font-bold transition-colors cursor-pointer ${
+                        p.stato === st
+                          ? st === 'live'
+                            ? 'bg-[#FF5500] text-white'
+                            : 'bg-[#09090B] text-white'
+                          : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-100'
+                      }`}
+                    >
+                      {st === 'in_programma' ? 'Programma' : st === 'live' ? 'LIVE' : 'Conclusa'}
+                    </button>
+                  ))}
+                </div>
               </div>
             </article>
           ))}

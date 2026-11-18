@@ -5,9 +5,12 @@ export const Footer: React.FC = () => {
   return (
     <footer className="bg-[#09090B] text-zinc-300 border-t border-zinc-800 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="pb-5 border-b border-zinc-800">
+        <div className="pb-5 border-b border-zinc-800 space-y-1.5">
           <p className="font-display text-sm sm:text-base font-extrabold tracking-tight text-white">
             Lista 1 EN-CORE <span className="text-[#FF5500]">•</span> Panetti Pitagora — Tre Giorni di Cultura e Sport
+          </p>
+          <p className="text-xs text-zinc-400">
+            Pagina non costruita da personale scolastico, ma interamente proprietaria e gestita dai Rappresentanti d&apos;Istituto.
           </p>
         </div>
 

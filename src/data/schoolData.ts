@@ -1,7 +1,20 @@
-import type { Disciplina, GiornoEvento } from '../types';
+import type { Disciplina, GiornoEvento, SedeIstituto } from '../types';
 
 export const SCHOOL_DOMAIN = 'panettipitagora.edu.it';
 export const SUPER_ADMIN_EMAIL = 'diliso.danilo@panettipitagora.edu.it';
+
+export const SUPER_ADMIN_EMAILS = [
+  'diliso.danilo@panettipitagora.edu.it',
+  'liseno.giulia@panettipitagora.edu.it',
+  'lobefaro.fabiana@panettipitagora.edu.it',
+  'chiapparino.davide@panettipitagora.edu.it',
+] as const;
+
+export function isSuperAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  return (SUPER_ADMIN_EMAILS as readonly string[]).includes(normalized);
+}
 
 export const DISCIPLINE: Disciplina[] = [
   'Calcio',
@@ -36,6 +49,23 @@ export const CLASSI_ISTITUTO: string[] = [
   '4 ITCA_A', '4 ITCA_B', '4 ITCM', '4 ITEC', '4 ITET', '4 ITIA_A', '4 ITIA_B', '4 ITIA_C',
   '5 ITCA_A', '5 ITCA_B', '5 ITCM', '5 ITEC', '5 ITET', '5 ITIA_A', '5 ITIA_B', '5 ITIA_C',
 ];
+
+const PITAGORA_BIENNIO_CLASSES = new Set(['1A', '1B', '1M', '2A', '2B']);
+
+export function getSedeForClasse(classe: string): SedeIstituto {
+  const clean = classe.trim().toUpperCase();
+  if (PITAGORA_BIENNIO_CLASSES.has(clean) || clean.includes('ITCA')) {
+    return 'Pitagora';
+  }
+  return 'Panetti';
+}
+
+export function getClassesForSede(sede: SedeIstituto): string[] {
+  return CLASSI_ISTITUTO.filter((c) => getSedeForClasse(c) === sede);
+}
+
+export const CLASSI_PITAGORA: string[] = getClassesForSede('Pitagora');
+export const CLASSI_PANETTI: string[] = getClassesForSede('Panetti');
 
 export const DOCENTI_RAW: string[] = [
   'ABUNDO CLAUDIA', 'ADAMO GIOVANNA', 'ADDABBO ROBERTA', 'ALTAMURA LUIGI', 'ALTAMURA MARIA',

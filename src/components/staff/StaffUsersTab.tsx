@@ -1,10 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { Check, Search, Shield, Trash2, UserCheck, UserPlus, X } from 'lucide-react';
-import { CLASSI_ISTITUTO, DISCIPLINE } from '../../data/schoolData';
+import {
+  CLASSI_ISTITUTO,
+  DISCIPLINE,
+  getClassesForSede,
+  getSedeForClasse,
+  isSuperAdminEmail,
+} from '../../data/schoolData';
 import type {
   Disciplina,
   DocenteRecord,
   PreRole,
+  SedeIstituto,
   SegnalazioneDocente,
   UserProfile,
   UserRole,
@@ -20,7 +27,7 @@ interface StaffUsersTabProps {
   segnalazioni: SegnalazioneDocente[];
   onUpdateUser: (
     uid: string,
-    updates: Partial<Pick<UserProfile, 'classe' | 'role' | 'isStaff' | 'arbitroTornei' | 'displayName'>>
+    updates: Partial<Pick<UserProfile, 'sede' | 'classe' | 'role' | 'isStaff' | 'arbitroTornei' | 'displayName'>>
   ) => Promise<void>;
   onUpsertPreRole: (preRole: PreRole) => Promise<void>;
   onDeletePreRole: (email: string) => Promise<void>;
@@ -83,11 +90,12 @@ export const StaffUsersTab: React.FC<StaffUsersTabProps> = ({
       setPreError('Inserisci un indirizzo valido @panettipitagora.edu.it');
       return;
     }
+    const targetIsSuperAdmin = isSuperAdminEmail(normalized);
     setPreError(null);
     await onUpsertPreRole({
       email: normalized,
-      isStaff: preStaff,
-      arbitroTornei: preArbitro,
+      isStaff: targetIsSuperAdmin ? true : preStaff,
+      arbitroTornei: targetIsSuperAdmin ? [] : preArbitro,
       forcedRole: preForcedRole,
       updatedBy: staffEmail,
     });
@@ -96,8 +104,8 @@ export const StaffUsersTab: React.FC<StaffUsersTabProps> = ({
     const existingUser = users.find((u) => u.email.toLowerCase() === normalized);
     if (existingUser) {
       await onUpdateUser(existingUser.uid, {
-        isStaff: preStaff,
-        arbitroTornei: preArbitro,
+        isStaff: targetIsSuperAdmin ? true : preStaff,
+        arbitroTornei: targetIsSuperAdmin ? [] : preArbitro,
         ...(preForcedRole ? { role: preForcedRole } : {}),
       });
     }
@@ -344,92 +352,144 @@ export const StaffUsersTab: React.FC<StaffUsersTabProps> = ({
         </div>
 
         <div className="divide-y divide-zinc-100">
-          {filteredUsers.map((u) => (
-            <div key={u.uid} className="py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-display font-bold text-sm text-[#09090B]">
-                    {u.displayName}
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-zinc-900 text-white text-[11px] font-display font-bold uppercase">
-                    {u.role}
-                  </span>
-                  {u.isStaff && (
-                    <span className="px-2 py-0.5 rounded bg-[#FF5500] text-white text-[11px] font-display font-bold uppercase">
-                      STAFF
+          {filteredUsers.map((u) => {
+            const untouchableSuperAdmin = isSuperAdminEmail(u.email);
+            const userClasses = u.sede ? getClassesForSede(u.sede) : CLASSI_ISTITUTO;
+            return (
+              <div key={u.uid} className="py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-display font-bold text-sm text-[#09090B]">
+                      {u.displayName}
                     </span>
-                  )}
+                    <span className="px-2 py-0.5 rounded bg-zinc-900 text-white text-[11px] font-display font-bold uppercase">
+                      {u.role}
+                    </span>
+                    {u.sede && (
+                      <span className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-zinc-800 text-[11px] font-display font-bold uppercase">
+                        {u.sede}
+                      </span>
+                    )}
+                    {untouchableSuperAdmin ? (
+                      <span className="px-2 py-0.5 rounded bg-[#FF5500] text-white text-[11px] font-display font-bold uppercase">
+                        SUPER ADMIN · INTOCCABILE
+                      </span>
+                    ) : (
+                      u.isStaff && (
+                        <span className="px-2 py-0.5 rounded bg-[#FF5500] text-white text-[11px] font-display font-bold uppercase">
+                          STAFF
+                        </span>
+                      )
+                    )}
+                  </div>
+                  <p className="text-xs font-mono text-zinc-500 truncate">{u.email}</p>
                 </div>
-                <p className="text-xs font-mono text-zinc-500 truncate">{u.email}</p>
-              </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Role Selector */}
-                <select
-                  aria-label={`Ruolo di ${u.displayName}`}
-                  value={u.role}
-                  onChange={(e) =>
-                    onUpdateUser(u.uid, { role: e.target.value as UserRole })
-                  }
-                  className="px-2.5 py-1.5 rounded-lg border border-zinc-300 text-xs font-semibold"
-                >
-                  <option value="studente">Studente</option>
-                  <option value="docente">Docente</option>
-                </select>
-
-                {/* Class Correction Dropdown */}
-                {u.role === 'studente' && (
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Role Selector */}
                   <select
-                    aria-label={`Classe di ${u.displayName}`}
-                    value={u.classe}
-                    onChange={(e) => onUpdateUser(u.uid, { classe: e.target.value })}
-                    className="px-2.5 py-1.5 rounded-lg border border-zinc-300 text-xs font-mono font-semibold"
+                    aria-label={`Ruolo di ${u.displayName}`}
+                    value={u.role}
+                    disabled={untouchableSuperAdmin}
+                    onChange={(e) =>
+                      onUpdateUser(u.uid, { role: e.target.value as UserRole })
+                    }
+                    className="px-2.5 py-1.5 rounded-lg border border-zinc-300 disabled:bg-zinc-100 disabled:text-zinc-500 text-xs font-semibold"
                   >
-                    <option value="">-- Classe --</option>
-                    {CLASSI_ISTITUTO.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
+                    <option value="studente">Studente</option>
+                    <option value="docente">Docente</option>
                   </select>
-                )}
 
-                {/* Staff Toggle */}
-                <button
-                  type="button"
-                  onClick={() => onUpdateUser(u.uid, { isStaff: !u.isStaff })}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-display font-bold border transition-colors cursor-pointer ${
-                    u.isStaff
-                      ? 'bg-[#09090B] text-[#FF7A00] border-[#09090B]'
-                      : 'bg-white text-zinc-600 border-zinc-300 hover:border-[#09090B]'
-                  }`}
-                >
-                  {u.isStaff ? 'Revoca Staff' : 'Rendi Staff'}
-                </button>
+                  {/* Sede Selector */}
+                  <select
+                    aria-label={`Sede di ${u.displayName}`}
+                    value={u.sede ?? ''}
+                    onChange={(e) => {
+                      const nextSede = e.target.value as '' | SedeIstituto;
+                      const keepClass =
+                        !nextSede ||
+                        !u.classe ||
+                        getSedeForClasse(u.classe) === nextSede;
+                      onUpdateUser(u.uid, {
+                        sede: nextSede,
+                        ...(keepClass ? {} : { classe: '' }),
+                      });
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg border border-zinc-300 text-xs font-semibold"
+                  >
+                    <option value="">-- Sede --</option>
+                    <option value="Panetti">Panetti</option>
+                    <option value="Pitagora">Pitagora</option>
+                  </select>
 
-                {/* Referee Discipline Toggles */}
-                <div className="flex items-center gap-1 flex-wrap">
-                  {DISCIPLINE.map((d) => {
-                    const active = u.arbitroTornei.includes(d);
-                    return (
+                  {/* Class Correction Dropdown */}
+                  {u.role === 'studente' && (
+                    <select
+                      aria-label={`Classe di ${u.displayName}`}
+                      value={u.classe}
+                      onChange={(e) => {
+                        const cls = e.target.value;
+                        onUpdateUser(u.uid, {
+                          classe: cls,
+                          ...(cls ? { sede: getSedeForClasse(cls) } : {}),
+                        });
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg border border-zinc-300 text-xs font-mono font-semibold"
+                    >
+                      <option value="">-- Classe --</option>
+                      {userClasses.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {/* Staff Toggle (bloccato per i 4 Super-Admin intoccabili) */}
+                  {untouchableSuperAdmin ? (
+                    <span className="px-2.5 py-1.5 rounded-lg text-xs font-display font-bold bg-[#09090B] text-[#FF7A00] border border-[#09090B]">
+                      Super-Staff Permanente (Non Arbitro)
+                    </span>
+                  ) : (
+                    <>
                       <button
-                        key={d}
                         type="button"
-                        onClick={() => toggleUserArbitro(u, d)}
-                        className={`px-2 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
-                          active
-                            ? 'bg-[#FF5500] text-white'
-                            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                        onClick={() => onUpdateUser(u.uid, { isStaff: !u.isStaff })}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-display font-bold border transition-colors cursor-pointer ${
+                          u.isStaff
+                            ? 'bg-[#09090B] text-[#FF7A00] border-[#09090B]'
+                            : 'bg-white text-zinc-600 border-zinc-300 hover:border-[#09090B]'
                         }`}
                       >
-                        {d}
+                        {u.isStaff ? 'Revoca Staff' : 'Rendi Staff'}
                       </button>
-                    );
-                  })}
+
+                      {/* Referee Discipline Toggles */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {DISCIPLINE.map((d) => {
+                          const active = u.arbitroTornei.includes(d);
+                          return (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => toggleUserArbitro(u, d)}
+                              className={`px-2 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
+                                active
+                                  ? 'bg-[#FF5500] text-white'
+                                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                              }`}
+                            >
+                              {d}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

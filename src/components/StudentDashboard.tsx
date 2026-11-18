@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { CalendarDays, Clock, FileText, MapPin, Trophy, Users } from 'lucide-react';
-import { GIORNI_EVENTO } from '../data/schoolData';
+import { GIORNI_EVENTO, getSedeForClasse } from '../data/schoolData';
 import type {
   AttivitaClasse,
   ConvocazioneTorneo,
@@ -34,6 +34,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'classe' | 'tornei'>('classe');
   const [selectedDay, setSelectedDay] = useState<GiornoEvento>(1);
 
+  const userSede = user.sede || (user.classe ? getSedeForClasse(user.classe) : '');
+
   const classActivities = useMemo(() => {
     const matching = attivita.filter(
       (item) => item.giorno === selectedDay && item.classi.includes(user.classe)
@@ -61,6 +63,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               {user.displayName}
             </h1>
             <div className="flex flex-wrap items-center gap-2.5">
+              {userSede && (
+                <span className="inline-flex items-center px-3 py-1 rounded-md bg-white/15 border border-white/20 text-white font-display text-xs font-extrabold tracking-wider uppercase">
+                  Sede {userSede}
+                </span>
+              )}
               <span className="inline-flex items-center px-3 py-1 rounded-md bg-[#FF5500] text-white font-mono text-xs font-bold tracking-wide">
                 {user.classe}
               </span>
@@ -275,7 +282,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </div>
         </div>
       ) : (
-        <LiveScoreboard partite={partite} />
+        <LiveScoreboard partite={partite} sedeFilter={userSede} />
       )}
     </div>
   );

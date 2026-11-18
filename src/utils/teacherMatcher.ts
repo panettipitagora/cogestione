@@ -1,5 +1,5 @@
-import { DOCENTI_RAW, SCHOOL_DOMAIN, SUPER_ADMIN_EMAIL } from '../data/schoolData';
-import type { Disciplina, DocenteRecord, PreRole, UserProfile, UserRole } from '../types';
+import { DOCENTI_RAW, getSedeForClasse, isSuperAdminEmail, SCHOOL_DOMAIN } from '../data/schoolData';
+import type { Disciplina, DocenteRecord, PreRole, SedeIstituto, UserProfile, UserRole } from '../types';
 
 const COMPOUND_SURNAME_PREFIXES = new Set([
   'DE',
@@ -169,7 +169,7 @@ export function resolveUserIdentityOnLogin(params: {
 }): UserProfile {
   const normalizedEmail = params.email.trim().toLowerCase();
   const matchedTeacher = matchTeacherByEmail(normalizedEmail, params.docentiList);
-  const isSuperAdmin = normalizedEmail === SUPER_ADMIN_EMAIL;
+  const superAdmin = isSuperAdminEmail(normalizedEmail);
 
   const baseRole: UserRole =
     params.preRole?.forcedRole === 'docente' || params.preRole?.forcedRole === 'studente'
@@ -177,7 +177,7 @@ export function resolveUserIdentityOnLogin(params: {
       : params.existingProfile?.role ?? (matchedTeacher ? 'docente' : 'studente');
 
   const resolvedStaff = Boolean(
-    isSuperAdmin ||
+    superAdmin ||
       params.preRole?.isStaff ||
       params.existingProfile?.isStaff
   );
@@ -187,7 +187,7 @@ export function resolveUserIdentityOnLogin(params: {
     ...(params.preRole?.arbitroTornei ?? []),
   ]);
 
-  // If preRole explicitly replaces arbitroTornei, prefer preRole when present
+  // Super-admin sono super-staff ma non risultano arbitri di default salvo assegnazione esplicita
   const resolvedArbitro: Disciplina[] = params.preRole
     ? [...params.preRole.arbitroTornei]
     : Array.from(mergedArbitroSet);
@@ -207,11 +207,17 @@ export function resolveUserIdentityOnLogin(params: {
       ? ''
       : params.preRole?.classeOverride || params.existingProfile?.classe || '';
 
+  const resolvedSede: '' | SedeIstituto =
+    params.preRole?.sedeOverride ||
+    params.existingProfile?.sede ||
+    (resolvedClasse ? getSedeForClasse(resolvedClasse) : '');
+
   return {
     uid: params.uid,
     email: normalizedEmail,
     displayName: resolvedDisplayName,
     role: baseRole,
+    sede: resolvedSede,
     classe: resolvedClasse,
     isStaff: resolvedStaff,
     arbitroTornei: resolvedArbitro,

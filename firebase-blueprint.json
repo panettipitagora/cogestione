@@ -27,6 +27,10 @@
           "type": "string",
           "enum": ["studente", "docente"]
         },
+        "sede": {
+          "type": "string",
+          "enum": ["", "Panetti", "Pitagora"]
+        },
         "classe": {
           "type": "string",
           "minLength": 0,
@@ -70,6 +74,10 @@
         "forcedRole": {
           "type": "string",
           "enum": ["", "studente", "docente"]
+        },
+        "sedeOverride": {
+          "type": "string",
+          "enum": ["", "Panetti", "Pitagora"]
         },
         "classeOverride": {
           "type": "string",

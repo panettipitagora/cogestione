@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CLASSI_ISTITUTO, DOCENTI_RAW } from '../data/schoolData';
+import {
+  CLASSI_ISTITUTO,
+  CLASSI_PANETTI,
+  CLASSI_PITAGORA,
+  DOCENTI_RAW,
+  getSedeForClasse,
+  isSuperAdminEmail,
+  SUPER_ADMIN_EMAILS,
+} from '../data/schoolData';
 import {
   buildDefaultDocentiRecords,
   generateTeacherEmailAliases,
@@ -9,9 +17,48 @@ import {
   resolveUserIdentityOnLogin,
 } from './teacherMatcher';
 
-test('official dataset contains exact 47 classes and 172 teachers', () => {
+test('official dataset contains exact 47 classes (12 Pitagora, 35 Panetti) and 172 teachers', () => {
   assert.equal(CLASSI_ISTITUTO.length, 47);
+  assert.equal(CLASSI_PITAGORA.length, 12);
+  assert.equal(CLASSI_PANETTI.length, 35);
   assert.equal(DOCENTI_RAW.length, 172);
+  assert.deepEqual(CLASSI_PITAGORA, [
+    '1A',
+    '1B',
+    '1M',
+    '2A',
+    '2B',
+    '3 ITCA_A',
+    '3 ITCA_B',
+    '3 ITCA_C',
+    '4 ITCA_A',
+    '4 ITCA_B',
+    '5 ITCA_A',
+    '5 ITCA_B',
+  ]);
+  assert.equal(getSedeForClasse('1M'), 'Pitagora');
+  assert.equal(getSedeForClasse('4 ITCA_B'), 'Pitagora');
+  assert.equal(getSedeForClasse('1C'), 'Panetti');
+  assert.equal(getSedeForClasse('4 ITIA_A'), 'Panetti');
+  assert.equal(getSedeForClasse('5 ITCM'), 'Panetti');
+});
+
+test('all 4 untouchable super-admins are recognized as staff without defaulting to arbitro', () => {
+  assert.equal(SUPER_ADMIN_EMAILS.length, 4);
+  for (const email of [
+    'diliso.danilo@panettipitagora.edu.it',
+    'liseno.giulia@panettipitagora.edu.it',
+    'lobefaro.fabiana@panettipitagora.edu.it',
+    'chiapparino.davide@panettipitagora.edu.it',
+  ]) {
+    assert.equal(isSuperAdminEmail(email), true);
+    const resolved = resolveUserIdentityOnLogin({
+      uid: `uid-${email}`,
+      email,
+    });
+    assert.equal(resolved.isStaff, true);
+    assert.deepEqual(resolved.arbitroTornei, []);
+  }
 });
 
 test('generateTeacherEmailAliases handles multiple given names progressively', () => {
@@ -105,6 +152,7 @@ test('resolveUserIdentityOnLogin assigns super-admin, teacher, referee, and stud
   });
   assert.equal(superAdmin.isStaff, true);
   assert.equal(superAdmin.role, 'studente');
+  assert.deepEqual(superAdmin.arbitroTornei, []);
 
   const teacher = resolveUserIdentityOnLogin({
     uid: 'u2',
@@ -113,6 +161,7 @@ test('resolveUserIdentityOnLogin assigns super-admin, teacher, referee, and stud
   assert.equal(teacher.role, 'docente');
   assert.equal(teacher.isStaff, false);
   assert.equal(teacher.classe, '');
+  assert.equal(teacher.sede, '');
 
   const refereeStudent = resolveUserIdentityOnLogin({
     uid: 'u3',
@@ -121,10 +170,14 @@ test('resolveUserIdentityOnLogin assigns super-admin, teacher, referee, and stud
       email: 'studente.arbitro@panettipitagora.edu.it',
       isStaff: false,
       arbitroTornei: ['Pallavolo', 'Ping Pong'],
+      sedeOverride: 'Pitagora',
+      classeOverride: '5 ITCA_A',
       updatedBy: 'diliso.danilo@panettipitagora.edu.it',
     },
   });
   assert.equal(refereeStudent.role, 'studente');
+  assert.equal(refereeStudent.sede, 'Pitagora');
+  assert.equal(refereeStudent.classe, '5 ITCA_A');
   assert.deepEqual(refereeStudent.arbitroTornei, ['Pallavolo', 'Ping Pong']);
 });
 

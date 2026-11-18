@@ -42,7 +42,7 @@ interface StaffDashboardProps {
   onDeleteConvocazione: (id: string) => Promise<void>;
   onSavePartita: (item: Omit<PartitaTorneo, 'createdAt' | 'updatedAt'>, isNew: boolean) => Promise<void>;
   onDeletePartita: (id: string) => Promise<void>;
-  onUpdateUser: (uid: string, updates: Partial<Pick<UserProfile, 'classe' | 'role' | 'isStaff' | 'arbitroTornei' | 'displayName'>>) => Promise<void>;
+  onUpdateUser: (uid: string, updates: Partial<Pick<UserProfile, 'sede' | 'classe' | 'role' | 'isStaff' | 'arbitroTornei' | 'displayName'>>) => Promise<void>;
   onUpsertPreRole: (preRole: PreRole) => Promise<void>;
   onDeletePreRole: (email: string) => Promise<void>;
   onSaveDocente: (docente: DocenteRecord, isNew: boolean) => Promise<void>;

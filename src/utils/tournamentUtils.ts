@@ -31,11 +31,13 @@ export function groupClassesByYear(classes: string[] = CLASSI_ISTITUTO): ClassYe
     }
   }
 
-  return [1, 2, 3, 4, 5].map((year) => ({
-    year,
-    label: labels[year],
-    classes: map.get(year) ?? [],
-  }));
+  return [1, 2, 3, 4, 5]
+    .map((year) => ({
+      year,
+      label: labels[year],
+      classes: map.get(year) ?? [],
+    }))
+    .filter((group) => group.classes.length > 0);
 }
 
 export function formatTeacherRollCall(conv: ConvocazioneTorneo): string {

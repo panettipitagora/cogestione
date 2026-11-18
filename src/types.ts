@@ -9,6 +9,8 @@ export type UserRole = 'studente' | 'docente';
 
 export type MatchStatus = 'in_programma' | 'live' | 'conclusa';
 
+export type SedeIstituto = 'Panetti' | 'Pitagora';
+
 export type GiornoEvento = 1 | 2 | 3;
 
 export interface UserProfile {
@@ -16,6 +18,7 @@ export interface UserProfile {
   email: string;
   displayName: string;
   role: UserRole;
+  sede?: '' | SedeIstituto;
   classe: string;
   isStaff: boolean;
   arbitroTornei: Disciplina[];
@@ -28,6 +31,7 @@ export interface PreRole {
   isStaff: boolean;
   arbitroTornei: Disciplina[];
   forcedRole?: '' | UserRole;
+  sedeOverride?: '' | SedeIstituto;
   classeOverride?: string;
   updatedBy: string;
   updatedAt?: string;

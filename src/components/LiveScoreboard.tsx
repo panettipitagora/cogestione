@@ -1,20 +1,33 @@
 import React, { useMemo, useState } from 'react';
 import { Calendar, MapPin, Search, Trophy } from 'lucide-react';
-import { DISCIPLINE, GIORNI_EVENTO } from '../data/schoolData';
-import type { Disciplina, GiornoEvento, PartitaTorneo } from '../types';
+import { DISCIPLINE, GIORNI_EVENTO, getSedeForClasse } from '../data/schoolData';
+import type { Disciplina, GiornoEvento, PartitaTorneo, SedeIstituto } from '../types';
 
 interface LiveScoreboardProps {
   partite: PartitaTorneo[];
+  sedeFilter?: '' | SedeIstituto;
 }
 
-export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({ partite }) => {
+export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
+  partite,
+  sedeFilter = '',
+}) => {
   const [disciplinaFilter, setDisciplinaFilter] = useState<'Tutte' | Disciplina>('Tutte');
   const [giornoFilter, setGiornoFilter] = useState<'Tutti' | GiornoEvento>('Tutti');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const sedeScopedPartite = useMemo(() => {
+    if (!sedeFilter) return partite;
+    return partite.filter(
+      (p) =>
+        getSedeForClasse(p.classeA) === sedeFilter ||
+        getSedeForClasse(p.classeB) === sedeFilter
+    );
+  }, [partite, sedeFilter]);
+
   const filteredPartite = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    const list = partite.filter((p) => {
+    const list = sedeScopedPartite.filter((p) => {
       if (disciplinaFilter !== 'Tutte' && p.disciplina !== disciplinaFilter) return false;
       if (giornoFilter !== 'Tutti' && p.giorno !== giornoFilter) return false;
       if (q) {
@@ -45,11 +58,11 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({ partite }) => {
       if (a.giorno !== b.giorno) return a.giorno - b.giorno;
       return a.oraInizio.localeCompare(b.oraInizio);
     });
-  }, [partite, disciplinaFilter, giornoFilter, searchQuery]);
+  }, [sedeScopedPartite, disciplinaFilter, giornoFilter, searchQuery]);
 
   const liveCount = useMemo(
-    () => partite.filter((p) => p.stato === 'live').length,
-    [partite]
+    () => sedeScopedPartite.filter((p) => p.stato === 'live').length,
+    [sedeScopedPartite]
   );
 
   return (
@@ -131,10 +144,17 @@ export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({ partite }) => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-xs text-zinc-500 pt-2 border-t border-zinc-100">
-          <span>
-            {filteredPartite.length} {filteredPartite.length === 1 ? 'incontro visualizzato' : 'incontri visualizzati'}
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 pt-2 border-t border-zinc-100">
+          <div className="flex items-center gap-2">
+            <span>
+              {filteredPartite.length} {filteredPartite.length === 1 ? 'incontro visualizzato' : 'incontri visualizzati'}
+            </span>
+            {sedeFilter && (
+              <span className="px-2 py-0.5 rounded bg-zinc-100 text-[#09090B] font-display font-bold text-[11px]">
+                Sede {sedeFilter}
+              </span>
+            )}
+          </div>
           <span className="font-mono tabular-nums">
             {liveCount > 0 ? `${liveCount} in diretta ora` : 'Nessun match live in questo momento'}
           </span>

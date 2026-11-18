@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { CalendarPlus, Pencil, Trash2 } from 'lucide-react';
-import { CLASSI_ISTITUTO, GIORNI_EVENTO } from '../../data/schoolData';
+import { CLASSI_ISTITUTO, CLASSI_PANETTI, CLASSI_PITAGORA, GIORNI_EVENTO } from '../../data/schoolData';
 import type { AttivitaClasse, GiornoEvento } from '../../types';
 import { getActivityPastelClass, groupClassesByYear, sortByStartTime } from '../../utils/tournamentUtils';
 
@@ -241,11 +241,25 @@ export const StaffScheduleTab: React.FC<StaffScheduleTabProps> = ({
 
           {/* Multi-class selector */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-semibold text-zinc-700">
                 Classi Destinatarie ({selectedClassi.length}/47)
               </span>
-              <div className="flex items-center gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSelectedClassi([...CLASSI_PANETTI])}
+                  className="text-zinc-700 font-semibold hover:text-[#FF5500] cursor-pointer"
+                >
+                  Solo Panetti ({CLASSI_PANETTI.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedClassi([...CLASSI_PITAGORA])}
+                  className="text-zinc-700 font-semibold hover:text-[#FF5500] cursor-pointer"
+                >
+                  Solo Pitagora ({CLASSI_PITAGORA.length})
+                </button>
                 <button
                   type="button"
                   onClick={() => setSelectedClassi([...CLASSI_ISTITUTO])}

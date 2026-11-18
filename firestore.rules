@@ -43,8 +43,17 @@ service cloud.firestore {
       return isVerifiedSchoolUser() && request.auth.uid == userId;
     }
 
+    function isSuperAdminTargetEmail(email) {
+      return email is string && email.lower() in [
+        'diliso.danilo@panettipitagora.edu.it',
+        'liseno.giulia@panettipitagora.edu.it',
+        'lobefaro.fabiana@panettipitagora.edu.it',
+        'chiapparino.davide@panettipitagora.edu.it'
+      ];
+    }
+
     function isSuperAdminEmail() {
-      return isVerifiedSchoolUser() && userEmail() == 'diliso.danilo@panettipitagora.edu.it';
+      return isVerifiedSchoolUser() && isSuperAdminTargetEmail(userEmail());
     }
 
     function userDocExists() {
@@ -90,12 +99,13 @@ service cloud.firestore {
     // --- ENTITY VALIDATION HELPERS ---
     function isValidUserProfile(data) {
       return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'classe', 'isStaff', 'arbitroTornei', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'classe', 'isStaff', 'arbitroTornei', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'sede', 'classe', 'isStaff', 'arbitroTornei', 'createdAt', 'updatedAt'])
         && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
         && data.email is string && data.email.size() >= 24 && data.email.size() <= 160
         && data.email.matches('^[^@]+@panettipitagora\\.edu\\.it$')
         && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
         && data.role in ['studente', 'docente']
+        && (!('sede' in data) || data.sede in ['', 'Panetti', 'Pitagora'])
         && data.classe is string && data.classe.size() <= 20
         && data.isStaff is bool
         && data.arbitroTornei is list && data.arbitroTornei.size() <= 5
@@ -106,13 +116,14 @@ service cloud.firestore {
 
     function isValidPreRole(data) {
       return data.keys().hasAll(['email', 'isStaff', 'arbitroTornei', 'updatedBy', 'updatedAt'])
-        && data.keys().hasOnly(['email', 'isStaff', 'arbitroTornei', 'forcedRole', 'classeOverride', 'updatedBy', 'updatedAt'])
+        && data.keys().hasOnly(['email', 'isStaff', 'arbitroTornei', 'forcedRole', 'sedeOverride', 'classeOverride', 'updatedBy', 'updatedAt'])
         && data.email is string && data.email.size() >= 24 && data.email.size() <= 160
         && data.email.matches('^[^@]+@panettipitagora\\.edu\\.it$')
         && data.isStaff is bool
         && data.arbitroTornei is list && data.arbitroTornei.size() <= 5
         && (data.arbitroTornei.size() == 0 || isValidDisciplina(data.arbitroTornei[0]))
         && (!('forcedRole' in data) || data.forcedRole in ['', 'studente', 'docente'])
+        && (!('sedeOverride' in data) || data.sedeOverride in ['', 'Panetti', 'Pitagora'])
         && (!('classeOverride' in data) || (data.classeOverride is string && data.classeOverride.size() <= 20))
         && data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 160
         && data.updatedAt is timestamp;
@@ -235,18 +246,20 @@ service cloud.firestore {
         && incoming().email == existing().email
         && incoming().createdAt == existing().createdAt
         && incoming().updatedAt == request.time
+        && (!isSuperAdminTargetEmail(existing().email) || incoming().isStaff == true)
         && (
           isStaff()
           || (
             isOwner(userId)
-            && incoming().diff(existing()).affectedKeys().hasOnly(['classe', 'displayName', 'updatedAt'])
+            && incoming().diff(existing()).affectedKeys().hasOnly(['sede', 'classe', 'displayName', 'updatedAt'])
             && incoming().isStaff == existing().isStaff
             && incoming().arbitroTornei == existing().arbitroTornei
             && incoming().role == existing().role
             && (existing().classe == '' || incoming().classe == existing().classe)
+            && (!('sede' in existing()) || existing().sede == '' || incoming().sede == existing().sede)
           )
         );
-      allow delete: if isValidId(userId) && isStaff();
+      allow delete: if isValidId(userId) && isStaff() && !isSuperAdminTargetEmail(existing().email);
     }
 
     match /pre_roles/{emailKey} {
@@ -256,8 +269,9 @@ service cloud.firestore {
         && isStaff()
         && isValidPreRole(incoming())
         && incoming().email.lower() == emailKey
-        && incoming().updatedAt == request.time;
-      allow delete: if isValidEmailDocId(emailKey) && isStaff();
+        && incoming().updatedAt == request.time
+        && (!isSuperAdminTargetEmail(emailKey) || incoming().isStaff == true);
+      allow delete: if isValidEmailDocId(emailKey) && isStaff() && !isSuperAdminTargetEmail(emailKey);
     }
 
     match /docenti/{docId} {

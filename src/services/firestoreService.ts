@@ -28,6 +28,7 @@ import type {
   ImpostazioniEvento,
   PartitaTorneo,
   PreRole,
+  SedeIstituto,
   SegnalazioneDocente,
   UserProfile,
 } from '../types';
@@ -198,6 +199,7 @@ export async function createUserProfileDoc(profile: UserProfile): Promise<void> 
       email: profile.email.toLowerCase(),
       displayName: profile.displayName,
       role: profile.role,
+      sede: profile.sede ?? '',
       classe: profile.classe,
       isStaff: profile.isStaff,
       arbitroTornei: profile.arbitroTornei,
@@ -209,10 +211,16 @@ export async function createUserProfileDoc(profile: UserProfile): Promise<void> 
   }
 }
 
-export async function confirmStudentClassDoc(uid: string, classe: string, displayName: string): Promise<void> {
+export async function confirmUserOnboardingDoc(
+  uid: string,
+  sede: SedeIstituto,
+  classe: string,
+  displayName: string
+): Promise<void> {
   const firestore = ensureDb();
   try {
     await updateDoc(doc(firestore, 'users', uid), {
+      sede,
       classe,
       displayName,
       updatedAt: serverTimestamp(),
@@ -224,7 +232,7 @@ export async function confirmStudentClassDoc(uid: string, classe: string, displa
 
 export async function staffUpdateUserDoc(
   uid: string,
-  updates: Partial<Pick<UserProfile, 'classe' | 'role' | 'isStaff' | 'arbitroTornei' | 'displayName'>>
+  updates: Partial<Pick<UserProfile, 'sede' | 'classe' | 'role' | 'isStaff' | 'arbitroTornei' | 'displayName'>>
 ): Promise<void> {
   const firestore = ensureDb();
   try {
@@ -246,6 +254,7 @@ export async function upsertPreRoleDoc(preRole: PreRole): Promise<void> {
       isStaff: preRole.isStaff,
       arbitroTornei: preRole.arbitroTornei,
       forcedRole: preRole.forcedRole ?? '',
+      sedeOverride: preRole.sedeOverride ?? '',
       classeOverride: preRole.classeOverride ?? '',
       updatedBy: preRole.updatedBy,
       updatedAt: serverTimestamp(),

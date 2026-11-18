@@ -1,21 +1,10 @@
 import React from 'react';
-import {
-  AlertTriangle,
-  ArrowRight,
-  Lock,
-  ShieldCheck,
-  Sparkles,
-  Trophy,
-  UserCheck,
-  Users,
-} from 'lucide-react';
-import type { DemoPresetId } from '../types';
-import { BrandLogo } from './BrandLogo';
+import { AlertTriangle, ArrowRight, Lock } from 'lucide-react';
+import { BrandLogo, ListaLogoSlot } from './BrandLogo';
 import { Footer } from './Footer';
 
 interface LoginViewProps {
   onGoogleLogin: () => void;
-  onSelectDemo: (preset: DemoPresetId) => void;
   authError: string | null;
   isLoading: boolean;
   isFirebaseConfigured: boolean;
@@ -23,7 +12,6 @@ interface LoginViewProps {
 
 export const LoginView: React.FC<LoginViewProps> = ({
   onGoogleLogin,
-  onSelectDemo,
   authError,
   isLoading,
   isFirebaseConfigured,
@@ -31,9 +19,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
       <header className="bg-white border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <BrandLogo />
-          <span className="text-xs font-mono text-zinc-500 whitespace-nowrap shrink-0">
+          <span className="hidden sm:inline-block text-xs font-mono text-zinc-500 whitespace-nowrap shrink-0">
             Portale di Lista 1
           </span>
         </div>
@@ -44,11 +32,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
           {/* Left Hero Editorial Panel */}
           <section className="lg:col-span-7 hero-encore-gradient rounded-2xl p-8 sm:p-10 lg:p-12 text-white flex flex-col justify-center">
             <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 text-xs font-display font-bold uppercase tracking-widest text-[#FF7A00]">
-                <span>Edizione Ufficiale</span>
-                <span aria-hidden="true">·</span>
-                <span>Lista 1 EN-CORE</span>
-              </div>
+              <ListaLogoSlot />
 
               <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.08] text-balance">
                 Tre Giorni di Cultura e Sport
@@ -107,69 +91,17 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   />
                 </svg>
                 <span>
-                  {isLoading ? 'Verifica account in corso...' : 'Accedi con Google Workspace'}
+                  {isLoading ? 'Verifica account in corso...' : 'Accedi con Google'}
                 </span>
                 <ArrowRight className="w-4 h-4 text-[#FF5500]" />
               </button>
-
-              {/* Demo Mode Role Selector */}
-              <div className="pt-4 border-t border-zinc-200 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-display font-bold uppercase tracking-wider text-zinc-500">
-                    Modalità Demo (Anteprima Ruoli)
-                  </p>
-                  <span className="text-[11px] font-mono text-zinc-400">Dati precaricati</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onSelectDemo('studente_attivo')}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-200 bg-[#F8FAFC] hover:border-[#FF5500] hover:bg-[#FFF7F2] text-xs font-semibold text-[#09090B] transition-colors cursor-pointer text-left"
-                  >
-                    <Users className="w-3.5 h-3.5 text-[#FF5500] shrink-0" />
-                    <span className="truncate">Studente (4 ITIA_A)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectDemo('studente_onboarding')}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-200 bg-[#F8FAFC] hover:border-[#FF5500] hover:bg-[#FFF7F2] text-xs font-semibold text-[#09090B] transition-colors cursor-pointer text-left"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#FF5500] shrink-0" />
-                    <span className="truncate">1° Accesso Classe</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectDemo('docente')}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-200 bg-[#F8FAFC] hover:border-[#FF5500] hover:bg-[#FFF7F2] text-xs font-semibold text-[#09090B] transition-colors cursor-pointer text-left"
-                  >
-                    <UserCheck className="w-3.5 h-3.5 text-[#FF5500] shrink-0" />
-                    <span className="truncate">Docente (47 Classi)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectDemo('arbitro_pallavolo')}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-200 bg-[#F8FAFC] hover:border-[#FF5500] hover:bg-[#FFF7F2] text-xs font-semibold text-[#09090B] transition-colors cursor-pointer text-left"
-                  >
-                    <Trophy className="w-3.5 h-3.5 text-[#FF5500] shrink-0" />
-                    <span className="truncate">Arbitro Tornei</span>
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onSelectDemo('staff_admin')}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#FF5500]/10 border border-[#FF5500]/30 hover:bg-[#FF5500] hover:text-white text-xs font-display font-bold text-[#FF5500] transition-colors cursor-pointer"
-                >
-                  <ShieldCheck className="w-4 h-4 shrink-0" />
-                  <span>Staff Super-Admin (CMS Completo)</span>
-                </button>
-              </div>
             </div>
 
             {/* Institutional Domain Box Highlighted at Bottom */}
-            <div className="bg-[#09090B] text-white rounded-xl p-4 space-y-2 border border-zinc-800">
-              <div className="flex items-center justify-between gap-2">
+            <div className="bg-[#09090B] text-white rounded-xl p-4 space-y-2.5 border border-zinc-800">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs font-display font-bold uppercase tracking-wider text-zinc-400">
-                  <Lock className="w-3.5 h-3.5 text-[#FF5500]" />
+                  <Lock className="w-3.5 h-3.5 text-[#FF5500] shrink-0" />
                   <span>Accesso Esclusivo Istituto</span>
                 </div>
                 <span className="font-mono text-xs font-bold px-2.5 py-1 rounded bg-[#FF5500] text-white">
@@ -177,7 +109,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 </span>
               </div>
               <p className="text-xs text-zinc-300 leading-relaxed">
-                L&apos;accesso è consentito esclusivamente tramite account Google Workspace della scuola con suffisso{' '}
+                L&apos;accesso è consentito esclusivamente tramite account Google della scuola con suffisso{' '}
                 <strong className="font-mono text-[#FF7A00]">@panettipitagora.edu.it</strong>. Account personali{' '}
                 <span className="font-mono text-zinc-400">@gmail.com</span> o di altri domini vengono bloccati automaticamente.
               </p>
