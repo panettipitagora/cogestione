@@ -1,0 +1,353 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HARDENED PRIMITIVES ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidEmailDocId(id) {
+      return id is string && id.size() >= 24 && id.size() <= 160 && id.matches('^[a-zA-Z0-9._\\-]+@panettipitagora\\.edu\\.it$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedSchoolUser() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email is string
+        && request.auth.token.email.size() <= 160
+        && request.auth.token.email.matches('^[^@]+@panettipitagora\\.edu\\.it$');
+    }
+
+    function userEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function isOwner(userId) {
+      return isVerifiedSchoolUser() && request.auth.uid == userId;
+    }
+
+    function isSuperAdminEmail() {
+      return isVerifiedSchoolUser() && userEmail() == 'diliso.danilo@panettipitagora.edu.it';
+    }
+
+    function userDocExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isStaff() {
+      return isSuperAdminEmail() || (
+        isVerifiedSchoolUser()
+        && userDocExists()
+        && getUserData().isStaff == true
+      );
+    }
+
+    function isValidDisciplina(d) {
+      return d is string && d in ['Calcio', 'Pallavolo', 'Ping Pong', 'Scacchi', 'Olimpiadi'];
+    }
+
+    function isValidTimeStr(t) {
+      return t is string && t.size() == 5 && t.matches('^[0-2][0-9]:[0-5][0-9]$');
+    }
+
+    function isRefereeFor(disciplina) {
+      return isVerifiedSchoolUser()
+        && isValidDisciplina(disciplina)
+        && userDocExists()
+        && (getUserData().arbitroTornei is list)
+        && (disciplina in getUserData().arbitroTornei);
+    }
+
+    function hasPreRoleDoc() {
+      return exists(/databases/$(database)/documents/pre_roles/$(userEmail()));
+    }
+
+    function getPreRoleData() {
+      return get(/databases/$(database)/documents/pre_roles/$(userEmail())).data;
+    }
+
+    // --- ENTITY VALIDATION HELPERS ---
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'classe', 'isStaff', 'arbitroTornei', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'classe', 'isStaff', 'arbitroTornei', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.email is string && data.email.size() >= 24 && data.email.size() <= 160
+        && data.email.matches('^[^@]+@panettipitagora\\.edu\\.it$')
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.role in ['studente', 'docente']
+        && data.classe is string && data.classe.size() <= 20
+        && data.isStaff is bool
+        && data.arbitroTornei is list && data.arbitroTornei.size() <= 5
+        && (data.arbitroTornei.size() == 0 || isValidDisciplina(data.arbitroTornei[0]))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPreRole(data) {
+      return data.keys().hasAll(['email', 'isStaff', 'arbitroTornei', 'updatedBy', 'updatedAt'])
+        && data.keys().hasOnly(['email', 'isStaff', 'arbitroTornei', 'forcedRole', 'classeOverride', 'updatedBy', 'updatedAt'])
+        && data.email is string && data.email.size() >= 24 && data.email.size() <= 160
+        && data.email.matches('^[^@]+@panettipitagora\\.edu\\.it$')
+        && data.isStaff is bool
+        && data.arbitroTornei is list && data.arbitroTornei.size() <= 5
+        && (data.arbitroTornei.size() == 0 || isValidDisciplina(data.arbitroTornei[0]))
+        && (!('forcedRole' in data) || data.forcedRole in ['', 'studente', 'docente'])
+        && (!('classeOverride' in data) || (data.classeOverride is string && data.classeOverride.size() <= 20))
+        && data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 160
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDocente(data) {
+      return data.keys().hasAll(['rawName', 'displayName', 'aliases', 'active', 'createdAt'])
+        && data.keys().hasOnly(['rawName', 'displayName', 'aliases', 'active', 'createdAt'])
+        && data.rawName is string && data.rawName.size() >= 2 && data.rawName.size() <= 120
+        && data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 120
+        && data.aliases is list && data.aliases.size() >= 1 && data.aliases.size() <= 10
+        && data.aliases[0] is string && data.aliases[0].size() <= 160
+        && data.active is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidAttivitaClasse(data) {
+      return data.keys().hasAll(['giorno', 'oraInizio', 'oraFine', 'titolo', 'luogo', 'classi', 'visibile', 'updatedBy', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['giorno', 'oraInizio', 'oraFine', 'titolo', 'tipoAttivita', 'luogo', 'note', 'classi', 'visibile', 'updatedBy', 'createdAt', 'updatedAt'])
+        && data.giorno in [1, 2, 3]
+        && isValidTimeStr(data.oraInizio)
+        && isValidTimeStr(data.oraFine)
+        && data.titolo is string && data.titolo.size() >= 2 && data.titolo.size() <= 160
+        && (!('tipoAttivita' in data) || (data.tipoAttivita is string && data.tipoAttivita.size() <= 60))
+        && data.luogo is string && data.luogo.size() >= 1 && data.luogo.size() <= 120
+        && (!('note' in data) || (data.note is string && data.note.size() <= 400))
+        && data.classi is list && data.classi.size() >= 1 && data.classi.size() <= 47
+        && data.classi[0] is string && data.classi[0].size() >= 2 && data.classi[0].size() <= 20
+        && data.visibile is bool
+        && data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 160
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidConvocazione(data) {
+      return data.keys().hasAll(['studenteNome', 'classe', 'squadraNome', 'disciplina', 'giorno', 'oraInizio', 'oraFine', 'campo', 'visibile', 'updatedBy', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['studenteNome', 'classe', 'squadraNome', 'disciplina', 'giorno', 'oraInizio', 'oraFine', 'campo', 'visibile', 'updatedBy', 'createdAt', 'updatedAt'])
+        && data.studenteNome is string && data.studenteNome.size() >= 2 && data.studenteNome.size() <= 120
+        && data.classe is string && data.classe.size() >= 2 && data.classe.size() <= 20
+        && data.squadraNome is string && data.squadraNome.size() >= 1 && data.squadraNome.size() <= 80
+        && isValidDisciplina(data.disciplina)
+        && data.giorno in [1, 2, 3]
+        && isValidTimeStr(data.oraInizio)
+        && isValidTimeStr(data.oraFine)
+        && data.campo is string && data.campo.size() >= 1 && data.campo.size() <= 100
+        && data.visibile is bool
+        && data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 160
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPartita(data) {
+      return data.keys().hasAll(['disciplina', 'giorno', 'fase', 'oraInizio', 'campo', 'squadraA', 'classeA', 'squadraB', 'classeB', 'punteggioA', 'punteggioB', 'stato', 'visibile', 'updatedBy', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['disciplina', 'giorno', 'fase', 'oraInizio', 'campo', 'squadraA', 'classeA', 'squadraB', 'classeB', 'punteggioA', 'punteggioB', 'stato', 'note', 'visibile', 'updatedBy', 'createdAt', 'updatedAt'])
+        && isValidDisciplina(data.disciplina)
+        && data.giorno in [1, 2, 3]
+        && data.fase is string && data.fase.size() >= 2 && data.fase.size() <= 60
+        && isValidTimeStr(data.oraInizio)
+        && data.campo is string && data.campo.size() >= 1 && data.campo.size() <= 100
+        && data.squadraA is string && data.squadraA.size() >= 1 && data.squadraA.size() <= 80
+        && data.classeA is string && data.classeA.size() >= 2 && data.classeA.size() <= 20
+        && data.squadraB is string && data.squadraB.size() >= 1 && data.squadraB.size() <= 80
+        && data.classeB is string && data.classeB.size() >= 2 && data.classeB.size() <= 20
+        && data.punteggioA is int && data.punteggioA >= 0 && data.punteggioA <= 999
+        && data.punteggioB is int && data.punteggioB >= 0 && data.punteggioB <= 999
+        && data.stato in ['in_programma', 'live', 'conclusa']
+        && (!('note' in data) || (data.note is string && data.note.size() <= 300))
+        && data.visibile is bool
+        && data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 160
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidImpostazioni(data) {
+      return data.keys().hasAll(['bannerAttivo', 'bannerTitolo', 'bannerTesto', 'bannerLivello', 'regolamentoPdfUrl', 'updatedBy', 'updatedAt'])
+        && data.keys().hasOnly(['bannerAttivo', 'bannerTitolo', 'bannerTesto', 'bannerLivello', 'regolamentoPdfUrl', 'updatedBy', 'updatedAt'])
+        && data.bannerAttivo is bool
+        && data.bannerTitolo is string && data.bannerTitolo.size() <= 120
+        && data.bannerTesto is string && data.bannerTesto.size() <= 400
+        && data.bannerLivello in ['info', 'urgente']
+        && data.regolamentoPdfUrl is string && data.regolamentoPdfUrl.size() <= 500
+        && data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 160
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSegnalazione(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'note', 'stato', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'note', 'stato', 'createdAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.email is string && data.email.size() >= 24 && data.email.size() <= 160
+        && data.email.matches('^[^@]+@panettipitagora\\.edu\\.it$')
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.note is string && data.note.size() <= 400
+        && data.stato in ['aperta', 'risolta']
+        && data.createdAt is timestamp;
+    }
+
+    // --- COLLECTION RULES ---
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isStaff());
+      allow list: if isStaff();
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().email.lower() == userEmail()
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isSuperAdminEmail()
+          || (
+            incoming().isStaff == (hasPreRoleDoc() && getPreRoleData().isStaff == true)
+            && incoming().arbitroTornei == (hasPreRoleDoc() ? getPreRoleData().arbitroTornei : [])
+          )
+        );
+      allow update: if isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isStaff()
+          || (
+            isOwner(userId)
+            && incoming().diff(existing()).affectedKeys().hasOnly(['classe', 'displayName', 'updatedAt'])
+            && incoming().isStaff == existing().isStaff
+            && incoming().arbitroTornei == existing().arbitroTornei
+            && incoming().role == existing().role
+            && (existing().classe == '' || incoming().classe == existing().classe)
+          )
+        );
+      allow delete: if isValidId(userId) && isStaff();
+    }
+
+    match /pre_roles/{emailKey} {
+      allow get: if isValidEmailDocId(emailKey) && isVerifiedSchoolUser() && (emailKey == userEmail() || isStaff());
+      allow list: if isStaff();
+      allow create, update: if isValidEmailDocId(emailKey)
+        && isStaff()
+        && isValidPreRole(incoming())
+        && incoming().email.lower() == emailKey
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidEmailDocId(emailKey) && isStaff();
+    }
+
+    match /docenti/{docId} {
+      allow get: if isValidId(docId) && isVerifiedSchoolUser() && (resource.data.active == true || isStaff());
+      allow list: if isVerifiedSchoolUser() && resource.data.active == true;
+      allow create: if isValidId(docId) && isStaff() && isValidDocente(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(docId) && isStaff() && isValidDocente(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(docId) && isStaff();
+    }
+
+    match /attivita_classi/{activityId} {
+      allow get: if isValidId(activityId) && isVerifiedSchoolUser() && (resource.data.visibile == true || isStaff());
+      allow list: if isVerifiedSchoolUser() && resource.data.visibile == true;
+      allow create: if isValidId(activityId)
+        && isStaff()
+        && isValidAttivitaClasse(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(activityId)
+        && isStaff()
+        && isValidAttivitaClasse(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(activityId) && isStaff();
+    }
+
+    match /convocazioni_tornei/{convId} {
+      allow get: if isValidId(convId) && isVerifiedSchoolUser() && (resource.data.visibile == true || isStaff());
+      allow list: if isVerifiedSchoolUser() && resource.data.visibile == true;
+      allow create: if isValidId(convId)
+        && isStaff()
+        && isValidConvocazione(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(convId)
+        && isStaff()
+        && isValidConvocazione(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(convId) && isStaff();
+    }
+
+    match /partite_tornei/{matchId} {
+      allow get: if isValidId(matchId) && isVerifiedSchoolUser() && (resource.data.visibile == true || isStaff());
+      allow list: if isVerifiedSchoolUser() && resource.data.visibile == true;
+      allow create: if isValidId(matchId)
+        && isValidPartita(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (isStaff() || isRefereeFor(incoming().disciplina));
+      allow update: if isValidId(matchId)
+        && isValidPartita(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isStaff()
+          || (
+            isRefereeFor(existing().disciplina)
+            && incoming().disciplina == existing().disciplina
+          )
+        );
+      allow delete: if isValidId(matchId) && (isStaff() || isRefereeFor(existing().disciplina));
+    }
+
+    match /impostazioni/{settingId} {
+      allow get: if isValidId(settingId) && isVerifiedSchoolUser();
+      allow list: if isVerifiedSchoolUser() && resource.data.bannerLivello in ['info', 'urgente'];
+      allow create, update: if isValidId(settingId)
+        && isStaff()
+        && isValidImpostazioni(incoming())
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(settingId) && isStaff();
+    }
+
+    match /segnalazioni_docenti/{reportId} {
+      allow get: if isValidId(reportId) && isVerifiedSchoolUser() && (resource.data.uid == request.auth.uid || isStaff());
+      allow list: if isStaff() || (isVerifiedSchoolUser() && resource.data.uid == request.auth.uid);
+      allow create: if isValidId(reportId)
+        && isVerifiedSchoolUser()
+        && isValidSegnalazione(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().email.lower() == userEmail()
+        && incoming().stato == 'aperta'
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(reportId)
+        && isStaff()
+        && isValidSegnalazione(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(reportId) && isStaff();
+    }
+  }
+}

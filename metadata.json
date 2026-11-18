@@ -1,0 +1,6 @@
+{
+  "name": "Tre Giorni di Cultura e Sport — Panetti Pitagora | Lista 1 EN-CORE",
+  "description": "Piattaforma ufficiale di gestione per la Tre Giorni di Cultura e Sport dell'Istituto Panetti Pitagora promossa da Lista 1 EN-CORE: calendari classi, convocazioni, giustificazioni docenti e scoreboard tornei in tempo reale.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

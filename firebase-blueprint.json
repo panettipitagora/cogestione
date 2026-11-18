@@ -1,0 +1,438 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Profilo utente istituzionale (Studente o Docente) con eventuale ruolo Staff e discipline Arbitro.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 24,
+          "maxLength": 160,
+          "pattern": "^[^@]+@panettipitagora\\.edu\\.it$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "enum": ["studente", "docente"]
+        },
+        "classe": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 20
+        },
+        "isStaff": {
+          "type": "boolean"
+        },
+        "arbitroTornei": {
+          "type": "array"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "displayName", "role", "classe", "isStaff", "arbitroTornei", "createdAt", "updatedAt"]
+    },
+    "PreRole": {
+      "title": "PreRole",
+      "description": "Pre-autorizzazione per email istituzionale (Staff o Arbitro per disciplina) prima o dopo il primo login.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 24,
+          "maxLength": 160,
+          "pattern": "^[^@]+@panettipitagora\\.edu\\.it$"
+        },
+        "isStaff": {
+          "type": "boolean"
+        },
+        "arbitroTornei": {
+          "type": "array"
+        },
+        "forcedRole": {
+          "type": "string",
+          "enum": ["", "studente", "docente"]
+        },
+        "classeOverride": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 20
+        },
+        "updatedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["email", "isStaff", "arbitroTornei", "updatedBy", "updatedAt"]
+    },
+    "DocenteRecord": {
+      "title": "DocenteRecord",
+      "description": "Docente autorizzato nella whitelist dell'Istituto con alias email generati.",
+      "type": "object",
+      "properties": {
+        "rawName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "aliases": {
+          "type": "array"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["rawName", "displayName", "aliases", "active", "createdAt"]
+    },
+    "AttivitaClasse": {
+      "title": "AttivitaClasse",
+      "description": "Attività culturale o didattica assegnata a una o più classi nei tre giorni.",
+      "type": "object",
+      "properties": {
+        "giorno": {
+          "type": "number"
+        },
+        "oraInizio": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+        },
+        "oraFine": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+        },
+        "titolo": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "tipoAttivita": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 60
+        },
+        "luogo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 400
+        },
+        "classi": {
+          "type": "array"
+        },
+        "visibile": {
+          "type": "boolean"
+        },
+        "updatedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["giorno", "oraInizio", "oraFine", "titolo", "luogo", "classi", "visibile", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "ConvocazioneTorneo": {
+      "title": "ConvocazioneTorneo",
+      "description": "Convocazione di uno studente in un torneo con supporto alla sostituzione rapida.",
+      "type": "object",
+      "properties": {
+        "studenteNome": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "classe": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 20
+        },
+        "squadraNome": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "disciplina": {
+          "type": "string",
+          "enum": ["Calcio", "Pallavolo", "Ping Pong", "Scacchi", "Olimpiadi"]
+        },
+        "giorno": {
+          "type": "number"
+        },
+        "oraInizio": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+        },
+        "oraFine": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+        },
+        "campo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "visibile": {
+          "type": "boolean"
+        },
+        "updatedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["studenteNome", "classe", "squadraNome", "disciplina", "giorno", "oraInizio", "oraFine", "campo", "visibile", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "PartitaTorneo": {
+      "title": "PartitaTorneo",
+      "description": "Incontro sportivo o gara di torneo tra due squadre di classe (non miste) con punteggio live.",
+      "type": "object",
+      "properties": {
+        "disciplina": {
+          "type": "string",
+          "enum": ["Calcio", "Pallavolo", "Ping Pong", "Scacchi", "Olimpiadi"]
+        },
+        "giorno": {
+          "type": "number"
+        },
+        "fase": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 60
+        },
+        "oraInizio": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+        },
+        "campo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "squadraA": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "classeA": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 20
+        },
+        "squadraB": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "classeB": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 20
+        },
+        "punteggioA": {
+          "type": "number"
+        },
+        "punteggioB": {
+          "type": "number"
+        },
+        "stato": {
+          "type": "string",
+          "enum": ["in_programma", "live", "conclusa"]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 300
+        },
+        "visibile": {
+          "type": "boolean"
+        },
+        "updatedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["disciplina", "giorno", "fase", "oraInizio", "campo", "squadraA", "classeA", "squadraB", "classeB", "punteggioA", "punteggioB", "stato", "visibile", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "ImpostazioniEvento": {
+      "title": "ImpostazioniEvento",
+      "description": "Avviso urgente globale e URL del PDF ufficiale dei regolamenti.",
+      "type": "object",
+      "properties": {
+        "bannerAttivo": {
+          "type": "boolean"
+        },
+        "bannerTitolo": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "bannerTesto": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 400
+        },
+        "bannerLivello": {
+          "type": "string",
+          "enum": ["info", "urgente"]
+        },
+        "regolamentoPdfUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "updatedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["bannerAttivo", "bannerTitolo", "bannerTesto", "bannerLivello", "regolamentoPdfUrl", "updatedBy", "updatedAt"]
+    },
+    "SegnalazioneDocente": {
+      "title": "SegnalazioneDocente",
+      "description": "Segnalazione inviata da un docente non riconosciuto automaticamente al primo login.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 24,
+          "maxLength": 160,
+          "pattern": "^[^@]+@panettipitagora\\.edu\\.it$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 400
+        },
+        "stato": {
+          "type": "string",
+          "enum": ["aperta", "risolta"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "displayName", "note", "stato", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Profili registrati degli utenti dell'istituto."
+    },
+    "/pre_roles/{emailKey}": {
+      "schema": { "$ref": "#/entities/PreRole" },
+      "description": "Pre-assegnazione ruoli Staff, Docenti e Arbitri per email."
+    },
+    "/docenti/{docId}": {
+      "schema": { "$ref": "#/entities/DocenteRecord" },
+      "description": "Whitelist ufficiale dei docenti sincronizzata dallo Staff."
+    },
+    "/attivita_classi/{activityId}": {
+      "schema": { "$ref": "#/entities/AttivitaClasse" },
+      "description": "Calendario delle attività culturali per classe nei 3 giorni."
+    },
+    "/convocazioni_tornei/{convId}": {
+      "schema": { "$ref": "#/entities/ConvocazioneTorneo" },
+      "description": "Elenco convocazioni studenti nei tornei sportivi e culturali."
+    },
+    "/partite_tornei/{matchId}": {
+      "schema": { "$ref": "#/entities/PartitaTorneo" },
+      "description": "Partite dei tornei e punteggi in tempo reale."
+    },
+    "/impostazioni/{settingId}": {
+      "schema": { "$ref": "#/entities/ImpostazioniEvento" },
+      "description": "Configurazione avviso live globale e URL regolamento PDF."
+    },
+    "/segnalazioni_docenti/{reportId}": {
+      "schema": { "$ref": "#/entities/SegnalazioneDocente" },
+      "description": "Richieste di verifica manuale per docenti non riconosciuti automaticamente."
+    }
+  }
+}
