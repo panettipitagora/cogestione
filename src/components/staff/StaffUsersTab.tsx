@@ -29,6 +29,7 @@ interface StaffUsersTabProps {
     uid: string,
     updates: Partial<Pick<UserProfile, 'sede' | 'classe' | 'role' | 'isStaff' | 'arbitroTornei' | 'displayName'>>
   ) => Promise<void>;
+  onDeleteUser: (uid: string) => Promise<void>;
   onUpsertPreRole: (preRole: PreRole) => Promise<void>;
   onDeletePreRole: (email: string) => Promise<void>;
   onSaveDocente: (docente: DocenteRecord, isNew: boolean) => Promise<void>;
@@ -43,6 +44,7 @@ export const StaffUsersTab: React.FC<StaffUsersTabProps> = ({
   docenti,
   segnalazioni,
   onUpdateUser,
+  onDeleteUser,
   onUpsertPreRole,
   onDeletePreRole,
   onSaveDocente,
@@ -51,6 +53,7 @@ export const StaffUsersTab: React.FC<StaffUsersTabProps> = ({
 }) => {
   const [userSearch, setUserSearch] = useState('');
   const [teacherSearch, setTeacherSearch] = useState('');
+  const [confirmDeleteUid, setConfirmDeleteUid] = useState<string | null>(null);
 
   // Pre-role form
   const [preEmail, setPreEmail] = useState('');
@@ -484,6 +487,39 @@ export const StaffUsersTab: React.FC<StaffUsersTabProps> = ({
                           );
                         })}
                       </div>
+
+                      {/* Delete Registered Account (2-step safe confirm) */}
+                      {confirmDeleteUid === u.uid ? (
+                        <div className="inline-flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteUid(null)}
+                            className="text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 cursor-pointer px-1"
+                          >
+                            Annulla
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await onDeleteUser(u.uid);
+                              setConfirmDeleteUid(null);
+                            }}
+                            className="text-[11px] font-bold text-red-700 hover:underline cursor-pointer px-1"
+                          >
+                            Conferma Elimina
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteUid(u.uid)}
+                          aria-label={`Elimina account ${u.displayName}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-zinc-200 text-xs font-semibold text-zinc-500 hover:text-red-600 hover:border-red-300 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Elimina</span>
+                        </button>
+                      )}
                     </>
                   )}
                 </div>

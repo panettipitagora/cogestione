@@ -43,6 +43,7 @@ interface StaffDashboardProps {
   onSavePartita: (item: Omit<PartitaTorneo, 'createdAt' | 'updatedAt'>, isNew: boolean) => Promise<void>;
   onDeletePartita: (id: string) => Promise<void>;
   onUpdateUser: (uid: string, updates: Partial<Pick<UserProfile, 'sede' | 'classe' | 'role' | 'isStaff' | 'arbitroTornei' | 'displayName'>>) => Promise<void>;
+  onDeleteUser: (uid: string) => Promise<void>;
   onUpsertPreRole: (preRole: PreRole) => Promise<void>;
   onDeletePreRole: (email: string) => Promise<void>;
   onSaveDocente: (docente: DocenteRecord, isNew: boolean) => Promise<void>;
@@ -141,6 +142,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = (props) => {
           docenti={props.docenti}
           segnalazioni={props.segnalazioni}
           onUpdateUser={props.onUpdateUser}
+          onDeleteUser={props.onDeleteUser}
           onUpsertPreRole={props.onUpsertPreRole}
           onDeletePreRole={props.onDeletePreRole}
           onSaveDocente={props.onSaveDocente}

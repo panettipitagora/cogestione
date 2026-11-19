@@ -108,10 +108,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 </div>
               )}
 
-              <div className="space-y-2.5">
+              <div className="space-y-2 text-center">
                 <button
                   type="button"
-                  onClick={onGoogleLogin}
+                  onClick={onDirectGoogleLogin ?? onGoogleLogin}
                   disabled={isLoading || !isFirebaseConfigured}
                   className="w-full min-h-[52px] flex items-center justify-center gap-3 px-5 py-3.5 rounded-xl bg-[#09090B] text-white font-display font-bold text-sm hover:bg-[#18181B] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5500] disabled:opacity-50 transition-colors cursor-pointer"
                 >
@@ -142,11 +142,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 {onDirectGoogleLogin && (
                   <button
                     type="button"
-                    onClick={onDirectGoogleLogin}
+                    onClick={onGoogleLogin}
                     disabled={isLoading || !isFirebaseConfigured}
-                    className="w-full min-h-[44px] px-4 py-2.5 rounded-xl border border-zinc-200 bg-[#F8FAFC] hover:border-[#FF5500] hover:bg-[#FFF7F2] text-xs font-display font-bold text-zinc-700 hover:text-[#09090B] disabled:opacity-50 transition-colors cursor-pointer"
+                    className="inline-block text-[11px] font-medium text-zinc-500 hover:text-[#09090B] underline underline-offset-2 disabled:opacity-50 transition-colors cursor-pointer py-1"
                   >
-                    Sul Wi-Fi scolastico non carica? Usa Accesso Diretto Rete Scolastica
+                    In caso di malfunzionamento clicca qui
                   </button>
                 )}
               </div>

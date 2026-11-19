@@ -279,6 +279,15 @@ export async function staffUpdateUserDoc(
   }
 }
 
+export async function deleteUserProfileDoc(uid: string): Promise<void> {
+  const firestore = ensureDb();
+  try {
+    await deleteDoc(doc(firestore, 'users', uid));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `users/${uid}`);
+  }
+}
+
 export async function upsertPreRoleDoc(preRole: PreRole): Promise<void> {
   const firestore = ensureDb();
   const emailKey = preRole.email.trim().toLowerCase();

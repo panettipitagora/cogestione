@@ -27,6 +27,7 @@ import {
   deleteDocenteDoc,
   deletePartitaDoc,
   deletePreRoleDoc,
+  deleteUserProfileDoc,
   fetchPreRole,
   fetchUserProfile,
   resolveTeacherReportDoc,
@@ -257,7 +258,7 @@ function AppShell() {
         );
       } else if (message.includes('popup-blocked')) {
         setAuthError(
-          'Popup bloccato dal browser: consenti i popup per questo sito oppure usa "Accesso Diretto Rete Scolastica".'
+          'Popup bloccato dal browser: consenti i popup per questo sito e riprova.'
         );
       } else if (
         message.includes('network-request-failed') ||
@@ -265,11 +266,11 @@ function AppShell() {
         message.includes('popup-closed-by-user')
       ) {
         setAuthError(
-          'Se la rete Wi-Fi scolastica blocca *.firebaseapp.com ("Impossibile raggiungere il sito"), usa il pulsante "Accesso Diretto Rete Scolastica" qui sotto oppure prova temporaneamente con la rete dati.'
+          'Connessione verso Firebase interrotta dalla rete scolastica: usa il pulsante principale "Accedi con Google".'
         );
       } else {
         setAuthError(
-          'Accesso Google Workspace non completato. Riprova con @panettipitagora.edu.it o usa Accesso Diretto Rete Scolastica.'
+          'Accesso Google non completato. Riprova con il tuo account @panettipitagora.edu.it.'
         );
       }
     } finally {
@@ -291,7 +292,7 @@ function AppShell() {
       const message = err instanceof Error ? err.message : String(err);
       if (!message.includes('popup-closed-by-user')) {
         setAuthError(
-          `Accesso diretto Google non completato (${message}). Verifica che l'URL attuale sia autorizzato in Google Cloud Console → OAuth Client.`
+          `Accesso Google non completato (${message}). Se il problema persiste prova "In caso di malfunzionamento clicca qui" qui sotto.`
         );
       }
     } finally {
@@ -436,6 +437,21 @@ function AppShell() {
     if (currentUser && currentUser.uid === uid) {
       setCurrentUser({ ...currentUser, ...safeUpdates });
     }
+  };
+
+  const handleDeleteUser = async (uid: string) => {
+    const targetUser = usersList.find((u) => u.uid === uid);
+    if (targetUser && isSuperAdminEmail(targetUser.email)) {
+      return;
+    }
+    if (isDemoMode) {
+      setUsersList((prev) => prev.filter((u) => u.uid !== uid));
+      if (currentUser && currentUser.uid === uid) {
+        setCurrentUser(null);
+      }
+      return;
+    }
+    await deleteUserProfileDoc(uid);
   };
 
   const handleUpsertPreRole = async (preRole: PreRole) => {
@@ -643,6 +659,7 @@ function AppShell() {
             onSavePartita={handleSavePartita}
             onDeletePartita={handleDeletePartita}
             onUpdateUser={handleUpdateUser}
+            onDeleteUser={handleDeleteUser}
             onUpsertPreRole={handleUpsertPreRole}
             onDeletePreRole={handleDeletePreRole}
             onSaveDocente={handleSaveDocente}
