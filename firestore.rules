@@ -199,12 +199,15 @@ service cloud.firestore {
 
     function isValidImpostazioni(data) {
       return data.keys().hasAll(['bannerAttivo', 'bannerTitolo', 'bannerTesto', 'bannerLivello', 'regolamentoPdfUrl', 'updatedBy', 'updatedAt'])
-        && data.keys().hasOnly(['bannerAttivo', 'bannerTitolo', 'bannerTesto', 'bannerLivello', 'regolamentoPdfUrl', 'updatedBy', 'updatedAt'])
+        && data.keys().hasOnly(['bannerAttivo', 'bannerTitolo', 'bannerTesto', 'bannerLivello', 'regolamentoPdfUrl', 'giornoEvento', 'cineforumDriveUrl', 'demoAbilitate', 'updatedBy', 'updatedAt'])
         && data.bannerAttivo is bool
         && data.bannerTitolo is string && data.bannerTitolo.size() <= 120
         && data.bannerTesto is string && data.bannerTesto.size() <= 400
         && data.bannerLivello in ['info', 'urgente']
         && data.regolamentoPdfUrl is string && data.regolamentoPdfUrl.size() <= 500
+        && (!('giornoEvento' in data) || data.giornoEvento in [0, 1, 2, 3, 4])
+        && (!('cineforumDriveUrl' in data) || (data.cineforumDriveUrl is string && data.cineforumDriveUrl.size() <= 500))
+        && (!('demoAbilitate' in data) || data.demoAbilitate in [0, 1])
         && data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 160
         && data.updatedAt is timestamp;
     }
@@ -337,7 +340,7 @@ service cloud.firestore {
     }
 
     match /impostazioni/{settingId} {
-      allow get: if isValidId(settingId) && isVerifiedSchoolUser();
+      allow get: if isValidId(settingId) && (settingId == 'evento' || isVerifiedSchoolUser());
       allow list: if isVerifiedSchoolUser() && resource.data.bannerLivello in ['info', 'urgente'];
       allow create, update: if isValidId(settingId)
         && isStaff()

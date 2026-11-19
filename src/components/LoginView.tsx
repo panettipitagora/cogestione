@@ -1,23 +1,33 @@
 import React from 'react';
-import { AlertTriangle, ArrowRight, Lock } from 'lucide-react';
+import { AlertTriangle, ArrowRight, ExternalLink, Film, Lock } from 'lucide-react';
+import type { DemoPresetId, ImpostazioniEvento } from '../types';
+import { isDemoModeEnabled, sanitizeExternalUrl } from '../utils/eventConfigUtils';
 import { BrandLogo, ListaLogoSlot } from './BrandLogo';
+import { DemoQuickButtons } from './DemoQuickButtons';
 import { Footer } from './Footer';
 
 interface LoginViewProps {
+  impostazioni: ImpostazioniEvento;
   onGoogleLogin: () => void;
+  onSelectDemo: (preset: DemoPresetId) => void;
   authError: string | null;
   isLoading: boolean;
   isFirebaseConfigured: boolean;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
+  impostazioni,
   onGoogleLogin,
+  onSelectDemo,
   authError,
   isLoading,
   isFirebaseConfigured,
 }) => {
+  const driveUrl = sanitizeExternalUrl(impostazioni.cineforumDriveUrl);
+  const demoEnabled = isDemoModeEnabled(impostazioni.demoAbilitate);
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+    <div className="min-h-[100dvh] flex flex-col bg-[#F8FAFC]">
       <header className="bg-white border-b border-zinc-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <BrandLogo />
@@ -27,26 +37,56 @@ export const LoginView: React.FC<LoginViewProps> = ({
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-14 flex items-center">
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          {/* Left Hero Editorial Panel */}
-          <section className="lg:col-span-7 hero-encore-gradient rounded-2xl p-8 sm:p-10 lg:p-12 text-white flex flex-col justify-center">
-            <div className="space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 flex flex-col justify-center gap-6">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+          {/* Left Hero Editorial Panel + Public Cineforum CTA */}
+          <section className="lg:col-span-7 hero-encore-gradient rounded-2xl p-6 sm:p-10 lg:p-12 text-white flex flex-col justify-between gap-6">
+            <div className="space-y-5">
               <ListaLogoSlot />
 
               <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.08] text-balance">
                 Tre Giorni di Cultura e Sport
               </h1>
 
-              <p className="text-zinc-300 text-base sm:text-lg max-w-xl leading-relaxed">
+              <p className="text-zinc-300 text-sm sm:text-lg max-w-xl leading-relaxed">
                 Il portale di Lista 1 per consultare il programma della tua classe, verificare le convocazioni ai tornei e seguire i risultati in diretta.
               </p>
+            </div>
+
+            {/* Big Public "Cineforum in Classe" Button (No Login Required) */}
+            <div className="pt-2">
+              {driveUrl ? (
+                <a
+                  href={driveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full min-h-[64px] px-5 sm:px-6 py-4 rounded-2xl bg-[#FF5500] hover:bg-[#FF7A00] text-white font-display font-extrabold text-base sm:text-lg flex items-center justify-between gap-4 transition-colors"
+                >
+                  <span className="inline-flex items-center gap-3.5 text-left min-w-0">
+                    <span className="w-11 h-11 rounded-xl bg-black/20 flex items-center justify-center shrink-0">
+                      <Film className="w-6 h-6 text-white" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block leading-tight">Cineforum in Classe</span>
+                      <span className="block text-xs font-sans font-medium text-white/90 mt-0.5">
+                        Apri i film su Google Drive — accessibile senza accesso
+                      </span>
+                    </span>
+                  </span>
+                  <ExternalLink className="w-5 h-5 shrink-0" />
+                </a>
+              ) : (
+                <div className="w-full min-h-[56px] px-5 py-3.5 rounded-2xl bg-white/10 border border-white/15 text-zinc-200 text-sm flex items-center gap-3">
+                  <Film className="w-5 h-5 text-[#FF7A00] shrink-0" />
+                  <span>Cineforum in Classe — cartella Google Drive in fase di pubblicazione</span>
+                </div>
+              )}
             </div>
           </section>
 
           {/* Right Auth & Institutional Box */}
-          <section className="lg:col-span-5 bg-white border border-zinc-200 rounded-2xl p-7 sm:p-9 flex flex-col justify-between space-y-6">
-            <div className="space-y-6">
+          <section className="lg:col-span-5 bg-white border border-zinc-200 rounded-2xl p-6 sm:p-8 flex flex-col justify-between space-y-6">
+            <div className="space-y-5">
               <div className="space-y-2">
                 <h2 className="font-display text-2xl font-extrabold tracking-tight text-[#09090B]">
                   Accedi al Portale
@@ -70,7 +110,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 type="button"
                 onClick={onGoogleLogin}
                 disabled={isLoading || !isFirebaseConfigured}
-                className="w-full flex items-center justify-center gap-3 px-5 py-3.5 rounded-xl bg-[#09090B] text-white font-display font-bold text-sm hover:bg-[#18181B] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5500] disabled:opacity-50 transition-colors cursor-pointer"
+                className="w-full min-h-[52px] flex items-center justify-center gap-3 px-5 py-3.5 rounded-xl bg-[#09090B] text-white font-display font-bold text-sm hover:bg-[#18181B] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5500] disabled:opacity-50 transition-colors cursor-pointer"
               >
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                   <path
@@ -95,6 +135,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 </span>
                 <ArrowRight className="w-4 h-4 text-[#FF5500]" />
               </button>
+
+              {demoEnabled && <DemoQuickButtons onSelectDemo={onSelectDemo} />}
             </div>
 
             {/* Institutional Domain Box Highlighted at Bottom */}
@@ -118,7 +160,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         </div>
       </main>
 
-      <Footer />
+      <Footer showAdminContact={false} />
     </div>
   );
 };

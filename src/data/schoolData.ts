@@ -105,12 +105,13 @@ export const DOCENTI_RAW: string[] = [
   'TRIGGIANI EMANUELE', 'VILELLA LUCIA',
 ];
 
+export const ADMIN_WHATSAPP_URL = 'https://wa.me/393276162394';
+
 export const RAPPRESENTANTI_ISTITUTO = [
   {
     name: 'Danilo Diliso',
-    role: 'Moderatore Software',
+    role: "Rappresentante d'Istituto",
     email: 'diliso.danilo@panettipitagora.edu.it',
-    phone: '3276162394',
   },
   {
     name: 'Giulia Liseno',

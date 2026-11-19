@@ -21,6 +21,7 @@ interface StudentDashboardProps {
   attivita: AttivitaClasse[];
   convocazioni: ConvocazioneTorneo[];
   partite: PartitaTorneo[];
+  defaultDay?: GiornoEvento;
   onOpenRegulations: () => void;
 }
 
@@ -29,10 +30,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   attivita,
   convocazioni,
   partite,
+  defaultDay = 1,
   onOpenRegulations,
 }) => {
   const [activeTab, setActiveTab] = useState<'classe' | 'tornei'>('classe');
-  const [selectedDay, setSelectedDay] = useState<GiornoEvento>(1);
+  const [selectedDay, setSelectedDay] = useState<GiornoEvento>(defaultDay);
+
+  React.useEffect(() => {
+    setSelectedDay(defaultDay);
+  }, [defaultDay]);
 
   const userSede = user.sede || (user.classe ? getSedeForClasse(user.classe) : '');
 
@@ -282,7 +288,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </div>
         </div>
       ) : (
-        <LiveScoreboard partite={partite} sedeFilter={userSede} />
+        <LiveScoreboard partite={partite} sedeFilter={userSede} defaultDay={defaultDay} />
       )}
     </div>
   );

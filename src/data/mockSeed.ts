@@ -78,7 +78,10 @@ export const INITIAL_IMPOSTAZIONI: ImpostazioniEvento = {
   bannerLivello: 'urgente',
   regolamentoPdfUrl:
     'https://www.panettipitagora.edu.it/documenti/regolamento-tre-giorni-encore.pdf',
-  updatedBy: 'diliso.danilo@panettipitagora.edu.it',
+  giornoEvento: 1,
+  cineforumDriveUrl: 'https://drive.google.com',
+  demoAbilitate: 0,
+  updatedBy: 'Staff Lista 1 EN-CORE',
 };
 
 export const INITIAL_ATTIVITA_CLASSI: AttivitaClasse[] = [

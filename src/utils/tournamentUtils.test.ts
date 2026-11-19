@@ -159,3 +159,40 @@ test('matchesTeacherSearch handles spaced compound surnames, accents, and email 
   assert.equal(matchesTeacherSearch(teacher, 'maria.dellaquila@'), true);
   assert.equal(matchesTeacherSearch(teacher, 'inesistente'), false);
 });
+
+import {
+  isDemoModeEnabled,
+  resolveActiveEventDay,
+  resolveStatoEvento,
+  sanitizeExternalUrl,
+} from './eventConfigUtils';
+
+test('resolveStatoEvento and resolveActiveEventDay handle states 0 through 4 accurately', () => {
+  assert.equal(resolveStatoEvento(0), 0);
+  assert.equal(resolveStatoEvento(1), 1);
+  assert.equal(resolveStatoEvento(2), 2);
+  assert.equal(resolveStatoEvento(3), 3);
+  assert.equal(resolveStatoEvento(4), 4);
+  assert.equal(resolveStatoEvento('3'), 3);
+  assert.equal(resolveStatoEvento(99), 1);
+
+  assert.equal(resolveActiveEventDay(0), 1);
+  assert.equal(resolveActiveEventDay(1), 1);
+  assert.equal(resolveActiveEventDay(2), 2);
+  assert.equal(resolveActiveEventDay(3), 3);
+  assert.equal(resolveActiveEventDay(4), 1);
+});
+
+test('isDemoModeEnabled and sanitizeExternalUrl validate Firebase flags safely', () => {
+  assert.equal(isDemoModeEnabled(1), true);
+  assert.equal(isDemoModeEnabled('1'), true);
+  assert.equal(isDemoModeEnabled(0), false);
+  assert.equal(isDemoModeEnabled(undefined), false);
+
+  assert.equal(
+    sanitizeExternalUrl('https://drive.google.com/drive/folders/abc'),
+    'https://drive.google.com/drive/folders/abc'
+  );
+  assert.equal(sanitizeExternalUrl('javascript:alert(1)'), '');
+  assert.equal(sanitizeExternalUrl(''), '');
+});

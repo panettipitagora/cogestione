@@ -349,7 +349,7 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({
         </div>
       )}
 
-      <Footer />
+      <Footer showAdminContact />
     </div>
   );
 };

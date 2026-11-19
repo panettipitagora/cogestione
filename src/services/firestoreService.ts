@@ -33,12 +33,41 @@ import type {
   UserProfile,
 } from '../types';
 import { buildDefaultDocentiRecords } from '../utils/teacherMatcher';
+import {
+  isDemoModeEnabled,
+  normalizeImpostazioniEvento,
+  resolveStatoEvento,
+} from '../utils/eventConfigUtils';
 
 function ensureDb() {
   if (!db) {
     throw new Error('Firebase Firestore non è configurato.');
   }
   return db;
+}
+
+export function subscribePublicImpostazioni(
+  onUpdate: (settings: ImpostazioniEvento) => void
+): Unsubscribe {
+  const firestore = ensureDb();
+  return onSnapshot(
+    doc(firestore, 'impostazioni', 'evento'),
+    (snap) => {
+      if (snap.exists()) {
+        onUpdate(
+          normalizeImpostazioniEvento(
+            snap.data() as Partial<ImpostazioniEvento>,
+            INITIAL_IMPOSTAZIONI
+          )
+        );
+      } else {
+        onUpdate(INITIAL_IMPOSTAZIONI);
+      }
+    },
+    (error) => {
+      console.warn('Lettura impostazioni pubbliche non riuscita, uso valori default:', error);
+    }
+  );
 }
 
 export function subscribeEventData(handlers: {
@@ -98,7 +127,12 @@ export function subscribeEventData(handlers: {
       doc(firestore, 'impostazioni', 'evento'),
       (snap) => {
         if (snap.exists()) {
-          handlers.onImpostazioni(snap.data() as ImpostazioniEvento);
+          handlers.onImpostazioni(
+            normalizeImpostazioniEvento(
+              snap.data() as Partial<ImpostazioniEvento>,
+              INITIAL_IMPOSTAZIONI
+            )
+          );
         }
       },
       (error) => handleFirestoreError(error, OperationType.GET, 'impostazioni/evento')
@@ -444,7 +478,10 @@ export async function saveImpostazioniDoc(settings: ImpostazioniEvento): Promise
       bannerTesto: settings.bannerTesto,
       bannerLivello: settings.bannerLivello,
       regolamentoPdfUrl: settings.regolamentoPdfUrl,
-      updatedBy: settings.updatedBy,
+      giornoEvento: resolveStatoEvento(settings.giornoEvento),
+      cineforumDriveUrl: (settings.cineforumDriveUrl ?? '').trim().slice(0, 500),
+      demoAbilitate: isDemoModeEnabled(settings.demoAbilitate) ? 1 : 0,
+      updatedBy: 'Staff Lista 1 EN-CORE',
       updatedAt: serverTimestamp(),
     });
   } catch (error) {

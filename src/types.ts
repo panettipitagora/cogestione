@@ -13,6 +13,8 @@ export type SedeIstituto = 'Panetti' | 'Pitagora';
 
 export type GiornoEvento = 1 | 2 | 3;
 
+export type StatoEvento = 0 | 1 | 2 | 3 | 4;
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -105,6 +107,9 @@ export interface ImpostazioniEvento {
   bannerTesto: string;
   bannerLivello: 'info' | 'urgente';
   regolamentoPdfUrl: string;
+  giornoEvento?: StatoEvento;
+  cineforumDriveUrl?: string;
+  demoAbilitate?: 0 | 1;
   updatedBy: string;
   updatedAt?: string;
 }

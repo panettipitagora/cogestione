@@ -36,6 +36,7 @@ import {
   staffUpdateUserDoc,
   submitTeacherReportDoc,
   subscribeEventData,
+  subscribePublicImpostazioni,
   subscribeStaffAdminCollections,
   syncOfficialDocentiAndSeedIfEmpty,
   upsertPreRoleDoc,
@@ -51,6 +52,7 @@ import type {
   PreRole,
   SedeIstituto,
   SegnalazioneDocente,
+  StatoEvento,
   UserProfile,
 } from './types';
 import {
@@ -58,7 +60,12 @@ import {
   isValidSchoolEmail,
   resolveUserIdentityOnLogin,
 } from './utils/teacherMatcher';
+import {
+  resolveActiveEventDay,
+  resolveStatoEvento,
+} from './utils/eventConfigUtils';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { EventStatusScreen } from './components/EventStatusScreen';
 import { Footer } from './components/Footer';
 import { LoginView } from './components/LoginView';
 import { Navbar } from './components/Navbar';
@@ -81,6 +88,7 @@ function AppShell() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const [regulationsOpen, setRegulationsOpen] = useState(false);
+  const [hasUrlStateOverride, setHasUrlStateOverride] = useState(false);
 
   // Event data state (synced from Firestore when logged in with Firebase, or local demo state)
   const [attivita, setAttivita] = useState<AttivitaClasse[]>(INITIAL_ATTIVITA_CLASSI);
@@ -94,11 +102,29 @@ function AppShell() {
   const [preRoles, setPreRoles] = useState<PreRole[]>(INITIAL_PRE_ROLES);
   const [segnalazioni, setSegnalazioni] = useState<SegnalazioneDocente[]>(INITIAL_SEGNALAZIONI);
 
-  // Support deterministic ?autostart=1 or ?demo=<preset> for direct preview/verification
+  // Support deterministic ?autostart=1, ?demo=<preset>, ?state=0..4, ?demoMode=1 for direct preview/verification
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const demoParam = params.get('demo') as DemoPresetId | null;
     const autostart = params.get('autostart');
+    const stateParam = params.get('state');
+    const demoModeParam = params.get('demoMode');
+
+    if (stateParam !== null || demoModeParam !== null) {
+      setHasUrlStateOverride(true);
+      setImpostazioni((prev) => ({
+        ...prev,
+        giornoEvento:
+          stateParam !== null ? resolveStatoEvento(stateParam) : prev.giornoEvento,
+        demoAbilitate:
+          demoModeParam === '1'
+            ? 1
+            : demoModeParam === '0'
+            ? 0
+            : prev.demoAbilitate,
+      }));
+    }
+
     if (demoParam && demoParam in DEMO_PRESET_MAP) {
       setIsDemoMode(true);
       setCurrentUser({ ...DEMO_PRESET_MAP[demoParam] });
@@ -114,6 +140,13 @@ function AppShell() {
       return;
     }
   }, []);
+
+  // Public real-time listener for impostazioni/evento (giornoEvento 0-4, cineforumDriveUrl, demoAbilitate 0/1)
+  useEffect(() => {
+    if (isDemoMode || hasUrlStateOverride || !isFirebaseConfigured) return;
+    const unsub = subscribePublicImpostazioni(setImpostazioni);
+    return () => unsub();
+  }, [isDemoMode, hasUrlStateOverride]);
 
   // Firebase Auth & connection initialization
   useEffect(() => {
@@ -444,9 +477,22 @@ function AppShell() {
     return res.seededCount;
   };
 
+  const handleSelectDemo = (preset: DemoPresetId) => {
+    setAuthError(null);
+    setIsDemoMode(true);
+    setCurrentUser({ ...DEMO_PRESET_MAP[preset] });
+    setActiveView(
+      preset === 'arbitro_pallavolo'
+        ? 'arbitro'
+        : preset === 'staff_admin'
+        ? 'staff'
+        : 'dashboard'
+    );
+  };
+
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
+      <div className="min-h-[100dvh] bg-[#F8FAFC] flex items-center justify-center p-6">
         <div className="text-center space-y-3">
           <div className="w-8 h-8 rounded-full border-2 border-[#FF5500] border-t-transparent animate-spin mx-auto" />
           <p className="font-display text-sm font-bold text-[#09090B]">
@@ -457,10 +503,32 @@ function AppShell() {
     );
   }
 
+  const statoEvento: StatoEvento = resolveStatoEvento(impostazioni.giornoEvento);
+  const activeEventDay = resolveActiveEventDay(statoEvento);
+
+  // States 0 (Stay Tuned) and 4 (Assemblea Today) lock public and non-staff views
+  if ((statoEvento === 0 || statoEvento === 4) && (!currentUser || !currentUser.isStaff)) {
+    return (
+      <EventStatusScreen
+        mode={statoEvento}
+        impostazioni={impostazioni}
+        currentUser={currentUser}
+        onGoogleLogin={handleGoogleLogin}
+        onSelectDemo={handleSelectDemo}
+        onLogout={handleLogout}
+        isLoading={loginPending}
+        isFirebaseConfigured={isFirebaseConfigured}
+        authError={authError}
+      />
+    );
+  }
+
   if (!currentUser) {
     return (
       <LoginView
+        impostazioni={impostazioni}
         onGoogleLogin={handleGoogleLogin}
+        onSelectDemo={handleSelectDemo}
         authError={authError}
         isLoading={loginPending}
         isFirebaseConfigured={isFirebaseConfigured}
@@ -493,7 +561,7 @@ function AppShell() {
       : activeView;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+    <div className="min-h-[100dvh] flex flex-col bg-[#F8FAFC]">
       <Navbar
         user={currentUser}
         activeView={resolvedView}
@@ -502,6 +570,12 @@ function AppShell() {
         onLogout={handleLogout}
         isDemoMode={isDemoMode}
       />
+
+      {(statoEvento === 0 || statoEvento === 4) && currentUser.isStaff && (
+        <div className="bg-[#FF5500] text-white px-4 py-2 text-center text-xs font-display font-bold">
+          Stato pubblico impostato su: {statoEvento === 0 ? '0 · Stay Tuned' : '4 · Assemblea di Istituto Today'} (puoi cambiarlo in Console Staff → Impostazioni).
+        </div>
+      )}
 
       <UrgentBanner impostazioni={impostazioni} />
 
@@ -537,6 +611,7 @@ function AppShell() {
           <RefereeConsole
             user={currentUser}
             partite={partite}
+            defaultDay={activeEventDay}
             onSavePartita={handleSavePartita}
             onDeletePartita={handleDeletePartita}
           />
@@ -546,6 +621,7 @@ function AppShell() {
             attivita={attivita}
             convocazioni={convocazioni}
             partite={partite}
+            defaultDay={activeEventDay}
             onOpenRegulations={() => setRegulationsOpen(true)}
           />
         ) : (
@@ -554,6 +630,7 @@ function AppShell() {
             attivita={attivita}
             convocazioni={convocazioni}
             partite={partite}
+            defaultDay={activeEventDay}
             onOpenRegulations={() => setRegulationsOpen(true)}
           />
         )}
@@ -565,7 +642,7 @@ function AppShell() {
         onClose={() => setRegulationsOpen(false)}
       />
 
-      <Footer />
+      <Footer showAdminContact />
     </div>
   );
 }

@@ -358,6 +358,17 @@
           "minLength": 0,
           "maxLength": 500
         },
+        "giornoEvento": {
+          "type": "number"
+        },
+        "cineforumDriveUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "demoAbilitate": {
+          "type": "number"
+        },
         "updatedBy": {
           "type": "string",
           "minLength": 1,

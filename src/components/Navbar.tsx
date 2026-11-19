@@ -25,7 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-zinc-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3 sm:gap-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-6">
         {/* Zone 1: Brand + Logo */}
         <BrandLogo />
 
@@ -95,7 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={onLogout}
             aria-label="Esci dall'account"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm font-semibold text-[#09090B] hover:bg-zinc-100 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-lg border border-zinc-200 bg-white text-xs sm:text-sm font-semibold text-[#09090B] hover:bg-zinc-100 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Esci</span>

@@ -6,15 +6,25 @@ import type { Disciplina, GiornoEvento, PartitaTorneo, SedeIstituto } from '../t
 interface LiveScoreboardProps {
   partite: PartitaTorneo[];
   sedeFilter?: '' | SedeIstituto;
+  defaultDay?: GiornoEvento;
 }
 
 export const LiveScoreboard: React.FC<LiveScoreboardProps> = ({
   partite,
   sedeFilter = '',
+  defaultDay,
 }) => {
   const [disciplinaFilter, setDisciplinaFilter] = useState<'Tutte' | Disciplina>('Tutte');
-  const [giornoFilter, setGiornoFilter] = useState<'Tutti' | GiornoEvento>('Tutti');
+  const [giornoFilter, setGiornoFilter] = useState<'Tutti' | GiornoEvento>(
+    defaultDay ?? 'Tutti'
+  );
   const [searchQuery, setSearchQuery] = useState('');
+
+  React.useEffect(() => {
+    if (defaultDay) {
+      setGiornoFilter(defaultDay);
+    }
+  }, [defaultDay]);
 
   const sedeScopedPartite = useMemo(() => {
     if (!sedeFilter) return partite;

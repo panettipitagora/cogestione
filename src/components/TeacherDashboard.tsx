@@ -32,6 +32,7 @@ interface TeacherDashboardProps {
   attivita: AttivitaClasse[];
   convocazioni: ConvocazioneTorneo[];
   partite: PartitaTorneo[];
+  defaultDay?: GiornoEvento;
   onOpenRegulations: () => void;
 }
 
@@ -40,13 +41,18 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   attivita,
   convocazioni,
   partite,
+  defaultDay = 1,
   onOpenRegulations,
 }) => {
   const [activeTab, setActiveTab] = useState<'classi' | 'tornei'>('classi');
   const [yearFilter, setYearFilter] = useState<'Tutte' | number>('Tutte');
   const [searchClass, setSearchClass] = useState('');
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
-  const [detailDay, setDetailDay] = useState<GiornoEvento>(1);
+  const [detailDay, setDetailDay] = useState<GiornoEvento>(defaultDay);
+
+  React.useEffect(() => {
+    setDetailDay(defaultDay);
+  }, [defaultDay]);
 
   const sedeClasses = useMemo(
     () => (user.sede ? getClassesForSede(user.sede) : CLASSI_ISTITUTO),
@@ -226,7 +232,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           </div>
         </div>
       ) : (
-        <LiveScoreboard partite={partite} sedeFilter={user.sede} />
+        <LiveScoreboard partite={partite} sedeFilter={user.sede} defaultDay={defaultDay} />
       )}
 
       {/* Class Detail Modal */}
