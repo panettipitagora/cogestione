@@ -70,6 +70,70 @@ export function subscribePublicImpostazioni(
   );
 }
 
+export function subscribeLimEventData(handlers: {
+  onAttivita: (items: AttivitaClasse[]) => void;
+  onConvocazioni: (items: ConvocazioneTorneo[]) => void;
+  onPartite: (items: PartitaTorneo[]) => void;
+  onImpostazioni: (settings: ImpostazioniEvento) => void;
+}): Unsubscribe[] {
+  const firestore = ensureDb();
+  const unsubs: Unsubscribe[] = [];
+
+  unsubs.push(
+    onSnapshot(
+      query(collection(firestore, 'attivita_classi'), where('visibile', '==', true)),
+      (snap) => {
+        const list: AttivitaClasse[] = snap.docs.map((d) => ({
+          ...(d.data() as Omit<AttivitaClasse, 'id'>),
+          id: d.id,
+        }));
+        handlers.onAttivita(list);
+      },
+      (error) => {
+        console.warn('Lettura LIM attivita_classi non riuscita:', error);
+      }
+    )
+  );
+
+  unsubs.push(
+    onSnapshot(
+      query(collection(firestore, 'convocazioni_tornei'), where('visibile', '==', true)),
+      (snap) => {
+        const list: ConvocazioneTorneo[] = snap.docs.map((d) => ({
+          ...(d.data() as Omit<ConvocazioneTorneo, 'id'>),
+          id: d.id,
+        }));
+        handlers.onConvocazioni(list);
+      },
+      (error) => {
+        console.warn('Lettura LIM convocazioni_tornei non riuscita:', error);
+      }
+    )
+  );
+
+  unsubs.push(
+    onSnapshot(
+      query(collection(firestore, 'partite_tornei'), where('visibile', '==', true)),
+      (snap) => {
+        const list: PartitaTorneo[] = snap.docs.map((d) => ({
+          ...(d.data() as Omit<PartitaTorneo, 'id'>),
+          id: d.id,
+        }));
+        handlers.onPartite(list);
+      },
+      (error) => {
+        console.warn('Lettura LIM partite_tornei non riuscita:', error);
+      }
+    )
+  );
+
+  unsubs.push(
+    subscribePublicImpostazioni(handlers.onImpostazioni)
+  );
+
+  return unsubs;
+}
+
 export function subscribeEventData(handlers: {
   onAttivita: (items: AttivitaClasse[]) => void;
   onConvocazioni: (items: ConvocazioneTorneo[]) => void;
@@ -257,6 +321,21 @@ export async function confirmUserOnboardingDoc(
       sede,
       classe,
       displayName,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+  }
+}
+
+export async function updateUserSedeDoc(
+  uid: string,
+  sede: SedeIstituto
+): Promise<void> {
+  const firestore = ensureDb();
+  try {
+    await updateDoc(doc(firestore, 'users', uid), {
+      sede,
       updatedAt: serverTimestamp(),
     });
   } catch (error) {

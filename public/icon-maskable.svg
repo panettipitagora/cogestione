@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#09090B" />
+      <stop offset="65%" stop-color="#1E1B18" />
+      <stop offset="100%" stop-color="#6B2B0E" />
+    </linearGradient>
+    <linearGradient id="flameMask" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF5500" />
+      <stop offset="100%" stop-color="#FF8A00" />
+    </linearGradient>
+  </defs>
+  <!-- Full-bleed background for adaptive Android/Chrome maskable crops -->
+  <rect width="512" height="512" fill="url(#bgMask)" />
+  <!-- Artwork safely scaled inside central ~72% safe zone -->
+  <g transform="translate(256 256) scale(0.74) translate(-256 -256)">
+    <path
+      d="M112 316 C128 386 202 426 286 410 C354 396 402 342 406 274"
+      fill="none"
+      stroke="#FF5500"
+      stroke-opacity="0.4"
+      stroke-width="22"
+      stroke-linecap="round"
+    />
+    <path
+      d="M262 96 C322 152 362 214 344 294 C332 346 288 380 236 380 C178 380 144 336 154 276 C162 232 194 202 206 164 C216 202 246 218 258 190 C272 156 266 122 262 96 Z"
+      fill="url(#flameMask)"
+    />
+    <path
+      d="M254 222 C282 252 292 288 278 320 C268 342 246 352 224 346 C204 340 194 320 200 296 C206 272 232 252 254 222 Z"
+      fill="#FFFFFF"
+    />
+    <circle cx="352" cy="146" r="18" fill="#FF7A00" />
+  </g>
+</svg>

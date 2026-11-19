@@ -33,6 +33,7 @@ interface TeacherDashboardProps {
   convocazioni: ConvocazioneTorneo[];
   partite: PartitaTorneo[];
   defaultDay?: GiornoEvento;
+  onChangeSede?: (sede: 'Panetti' | 'Pitagora') => Promise<void>;
   onOpenRegulations: () => void;
 }
 
@@ -42,6 +43,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   convocazioni,
   partite,
   defaultDay = 1,
+  onChangeSede,
   onOpenRegulations,
 }) => {
   const [activeTab, setActiveTab] = useState<'classi' | 'tornei'>('classi');
@@ -101,10 +103,41 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               <span className="inline-flex items-center px-3 py-1 rounded-md bg-[#FF5500] text-white font-display text-xs font-extrabold tracking-wider uppercase">
                 DOCENTE
               </span>
-              {user.sede && (
-                <span className="inline-flex items-center px-3 py-1 rounded-md bg-white/15 border border-white/20 text-white font-display text-xs font-extrabold tracking-wider uppercase">
-                  SEDE {user.sede}
-                </span>
+              {onChangeSede ? (
+                <div
+                  role="group"
+                  aria-label="Seleziona sede istituto"
+                  className="inline-flex items-center gap-1 p-1 rounded-lg bg-white/10 border border-white/20"
+                >
+                  {(['Panetti', 'Pitagora'] as const).map((sedeOpt) => {
+                    const active = user.sede === sedeOpt;
+                    return (
+                      <button
+                        key={sedeOpt}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => {
+                          setYearFilter('Tutte');
+                          setSelectedClass(null);
+                          void onChangeSede(sedeOpt);
+                        }}
+                        className={`px-2.5 py-1 rounded-md font-display text-xs font-extrabold tracking-wider uppercase transition-colors cursor-pointer ${
+                          active
+                            ? 'bg-white text-[#09090B]'
+                            : 'text-zinc-200 hover:bg-white/10'
+                        }`}
+                      >
+                        Sede {sedeOpt}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                user.sede && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-md bg-white/15 border border-white/20 text-white font-display text-xs font-extrabold tracking-wider uppercase">
+                    SEDE {user.sede}
+                  </span>
+                )
               )}
               <span className="text-xs font-mono text-zinc-300">{user.email}</span>
             </div>

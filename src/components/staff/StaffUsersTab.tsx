@@ -215,7 +215,7 @@ export const StaffUsersTab: React.FC<StaffUsersTabProps> = ({
                   className="accent-[#FF5500] w-4 h-4"
                 />
                 <span className="text-xs font-bold text-[#09090B]">
-                  Permessi Staff Super-Admin
+                  Permessi Staff (Accesso Completo)
                 </span>
               </label>
 

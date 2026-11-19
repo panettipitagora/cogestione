@@ -65,11 +65,9 @@ service cloud.firestore {
     }
 
     function isStaff() {
-      return isSuperAdminEmail() || (
-        isVerifiedSchoolUser()
-        && userDocExists()
-        && getUserData().isStaff == true
-      );
+      return isSuperAdminEmail()
+        || (isVerifiedSchoolUser() && userDocExists() && getUserData().isStaff == true)
+        || (isVerifiedSchoolUser() && hasPreRoleDoc() && getPreRoleData().isStaff == true);
     }
 
     function isValidDisciplina(d) {
@@ -259,7 +257,7 @@ service cloud.firestore {
             && incoming().arbitroTornei == existing().arbitroTornei
             && incoming().role == existing().role
             && (existing().classe == '' || incoming().classe == existing().classe)
-            && (!('sede' in existing()) || existing().sede == '' || incoming().sede == existing().sede)
+            && (!('sede' in existing()) || existing().sede == '' || incoming().sede == existing().sede || existing().role == 'docente')
           )
         );
       allow delete: if isValidId(userId) && isStaff() && !isSuperAdminTargetEmail(existing().email);
@@ -286,8 +284,8 @@ service cloud.firestore {
     }
 
     match /attivita_classi/{activityId} {
-      allow get: if isValidId(activityId) && isVerifiedSchoolUser() && (resource.data.visibile == true || isStaff());
-      allow list: if isVerifiedSchoolUser() && resource.data.visibile == true;
+      allow get: if isValidId(activityId) && (resource.data.visibile == true || isStaff());
+      allow list: if resource.data.visibile == true;
       allow create: if isValidId(activityId)
         && isStaff()
         && isValidAttivitaClasse(incoming())
@@ -302,8 +300,8 @@ service cloud.firestore {
     }
 
     match /convocazioni_tornei/{convId} {
-      allow get: if isValidId(convId) && isVerifiedSchoolUser() && (resource.data.visibile == true || isStaff());
-      allow list: if isVerifiedSchoolUser() && resource.data.visibile == true;
+      allow get: if isValidId(convId) && (resource.data.visibile == true || isStaff());
+      allow list: if resource.data.visibile == true;
       allow create: if isValidId(convId)
         && isStaff()
         && isValidConvocazione(incoming())
@@ -318,8 +316,8 @@ service cloud.firestore {
     }
 
     match /partite_tornei/{matchId} {
-      allow get: if isValidId(matchId) && isVerifiedSchoolUser() && (resource.data.visibile == true || isStaff());
-      allow list: if isVerifiedSchoolUser() && resource.data.visibile == true;
+      allow get: if isValidId(matchId) && (resource.data.visibile == true || isStaff());
+      allow list: if resource.data.visibile == true;
       allow create: if isValidId(matchId)
         && isValidPartita(incoming())
         && incoming().createdAt == request.time

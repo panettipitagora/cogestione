@@ -5,6 +5,7 @@ import { isDemoModeEnabled, sanitizeExternalUrl } from '../utils/eventConfigUtil
 import { BrandLogo, ListaLogoSlot } from './BrandLogo';
 import { DemoQuickButtons } from './DemoQuickButtons';
 import { Footer } from './Footer';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface LoginViewProps {
   impostazioni: ImpostazioniEvento;
@@ -31,11 +32,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#F8FAFC]">
       <header className="bg-white border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
           <BrandLogo />
-          <span className="hidden sm:inline-block text-xs font-mono text-zinc-500 whitespace-nowrap shrink-0">
-            Portale di Lista 1
-          </span>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <PWAInstallButton compact />
+            <span className="hidden sm:inline-block text-xs font-mono text-zinc-500 whitespace-nowrap shrink-0">
+              Portale di Lista 1
+            </span>
+          </div>
         </div>
       </header>
 

@@ -39,9 +39,11 @@ import {
   staffUpdateUserDoc,
   submitTeacherReportDoc,
   subscribeEventData,
+  subscribeLimEventData,
   subscribePublicImpostazioni,
   subscribeStaffAdminCollections,
   syncOfficialDocentiAndSeedIfEmpty,
+  updateUserSedeDoc,
   upsertPreRoleDoc,
 } from './services/firestoreService';
 import type {
@@ -67,9 +69,17 @@ import {
   resolveActiveEventDay,
   resolveStatoEvento,
 } from './utils/eventConfigUtils';
+import {
+  buildLimClassPath,
+  formatLimClassSlug,
+  normalizeBasePath,
+  parseLimRoute,
+  type LimRouteMatch,
+} from './utils/limRouteUtils';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { EventStatusScreen } from './components/EventStatusScreen';
 import { Footer } from './components/Footer';
+import { LimKioskView } from './components/LimKioskView';
 import { LoginView } from './components/LoginView';
 import { Navbar } from './components/Navbar';
 import { RefereeConsole } from './components/RefereeConsole';
@@ -92,6 +102,13 @@ function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const [regulationsOpen, setRegulationsOpen] = useState(false);
   const [hasUrlStateOverride, setHasUrlStateOverride] = useState(false);
+  const [limRoute, setLimRoute] = useState<LimRouteMatch>(() =>
+    parseLimRoute(
+      window.location.pathname,
+      window.location.search,
+      import.meta.env.BASE_URL
+    )
+  );
 
   // Event data state (synced from Firestore when logged in with Firebase, or local demo state)
   const [attivita, setAttivita] = useState<AttivitaClasse[]>(INITIAL_ATTIVITA_CLASSI);
@@ -104,6 +121,87 @@ function AppShell() {
   const [usersList, setUsersList] = useState<UserProfile[]>(DEMO_USERS_SEED);
   const [preRoles, setPreRoles] = useState<PreRole[]>(INITIAL_PRE_ROLES);
   const [segnalazioni, setSegnalazioni] = useState<SegnalazioneDocente[]>(INITIAL_SEGNALAZIONI);
+
+  // Sync browser back/forward navigation for /staff and /staff/<classe>
+  useEffect(() => {
+    const onPopState = () => {
+      setLimRoute(
+        parseLimRoute(
+          window.location.pathname,
+          window.location.search,
+          import.meta.env.BASE_URL
+        )
+      );
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  // Update PWA manifest / Apple title when locked on a LIM class (/staff/1G) so "Add to Home Screen" opens that exact class
+  useEffect(() => {
+    if (!limRoute.isLimMode) return;
+
+    const base = normalizeBasePath(import.meta.env.BASE_URL);
+    const prevTitle = document.title;
+    const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    const prevManifestHref = manifestLink?.getAttribute('href') ?? null;
+    const appleTitleMeta = document.querySelector<HTMLMetaElement>(
+      'meta[name="apple-mobile-web-app-title"]'
+    );
+    const prevAppleTitle = appleTitleMeta?.getAttribute('content') ?? null;
+    let blobUrl: string | null = null;
+
+    if (limRoute.limClass) {
+      const cls = limRoute.limClass;
+      const slug = formatLimClassSlug(cls);
+      const targetPath = buildLimClassPath(cls, base);
+      document.title = `LIM ${cls} — Tre Giorni di Cultura e Sport`;
+      if (appleTitleMeta) {
+        appleTitleMeta.setAttribute('content', `LIM ${cls}`);
+      }
+      if (manifestLink) {
+        if (import.meta.env.DEV) {
+          const dynamicManifest = {
+            id: targetPath,
+            name: `LIM ${cls} · Tre Giorni di Cultura e Sport`,
+            short_name: `LIM ${cls}`.slice(0, 12),
+            description: `Schermo LIM permanente per la classe ${cls}`,
+            start_url: targetPath,
+            scope: targetPath,
+            display: 'standalone',
+            theme_color: '#09090B',
+            background_color: '#09090B',
+            icons: [
+              { src: `${base}pwa-192x192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+              { src: `${base}pwa-512x512.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+              { src: `${base}pwa-maskable-512x512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+            ],
+          };
+          blobUrl = URL.createObjectURL(
+            new Blob([JSON.stringify(dynamicManifest)], { type: 'application/manifest+json' })
+          );
+          manifestLink.setAttribute('href', blobUrl);
+        } else {
+          manifestLink.setAttribute('href', `${base}staff/${slug}/manifest.webmanifest`);
+        }
+      }
+    } else {
+      document.title = 'Configurazione LIM — Tre Giorni di Cultura e Sport';
+    }
+
+    return () => {
+      document.title = prevTitle;
+      if (appleTitleMeta && prevAppleTitle) {
+        appleTitleMeta.setAttribute('content', prevAppleTitle);
+      }
+      if (manifestLink && prevManifestHref) {
+        manifestLink.setAttribute('href', prevManifestHref);
+      }
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [limRoute.isLimMode, limRoute.limClass]);
 
   // Support deterministic ?autostart=1, ?demo=<preset>, ?state=0..4, ?demoMode=1 for direct preview/verification
   useEffect(() => {
@@ -144,17 +242,35 @@ function AppShell() {
     }
   }, []);
 
-  // Public real-time listener for impostazioni/evento (giornoEvento 0-4, cineforumDriveUrl, demoAbilitate 0/1)
+  // Public real-time listener for impostazioni/evento (and full visible schedule on unauthenticated /staff LIM mode)
   useEffect(() => {
-    if (isDemoMode || hasUrlStateOverride || !isFirebaseConfigured) return;
+    if (isDemoMode || !isFirebaseConfigured) return;
+
+    if (limRoute.isLimMode) {
+      const unsubs = subscribeLimEventData({
+        onAttivita: setAttivita,
+        onConvocazioni: setConvocazioni,
+        onPartite: setPartite,
+        onImpostazioni: (settings) => {
+          if (!hasUrlStateOverride) {
+            setImpostazioni(settings);
+          }
+        },
+      });
+      return () => {
+        unsubs.forEach((u) => u());
+      };
+    }
+
+    if (hasUrlStateOverride) return;
     const unsub = subscribePublicImpostazioni(setImpostazioni);
     return () => unsub();
-  }, [isDemoMode, hasUrlStateOverride]);
+  }, [isDemoMode, hasUrlStateOverride, limRoute.isLimMode]);
 
   // Firebase Auth & connection initialization
   useEffect(() => {
     const activeAuth = auth;
-    if (isDemoMode || !isFirebaseConfigured || !activeAuth) {
+    if (limRoute.isLimMode || isDemoMode || !isFirebaseConfigured || !activeAuth) {
       setAuthLoading(false);
       return;
     }
@@ -194,6 +310,19 @@ function AppShell() {
 
         if (!existingProfile) {
           await createUserProfileDoc(resolved);
+        } else if (
+          resolved.isStaff !== existingProfile.isStaff ||
+          resolved.role !== existingProfile.role ||
+          JSON.stringify(resolved.arbitroTornei) !== JSON.stringify(existingProfile.arbitroTornei)
+        ) {
+          // Keep existing profile aligned if pre_roles or super-admin rights changed since last login
+          if (resolved.isStaff) {
+            await staffUpdateUserDoc(fbUser.uid, {
+              isStaff: resolved.isStaff,
+              role: resolved.role,
+              arbitroTornei: resolved.arbitroTornei,
+            });
+          }
         }
 
         setAuthError(null);
@@ -211,7 +340,7 @@ function AppShell() {
     });
 
     return () => unsub();
-  }, [isDemoMode]);
+  }, [isDemoMode, limRoute.isLimMode]);
 
   // Real-time Firestore subscriptions when authenticated with Firebase
   useEffect(() => {
@@ -326,6 +455,25 @@ function AppShell() {
     }
     await confirmUserOnboardingDoc(currentUser.uid, sede, classe, currentUser.displayName);
     setCurrentUser({ ...currentUser, sede, classe });
+  };
+
+  const handleChangeTeacherSede = async (sede: SedeIstituto) => {
+    if (!currentUser || currentUser.role !== 'docente') return;
+    if (isDemoMode) {
+      setCurrentUser({ ...currentUser, sede });
+      setUsersList((prev) =>
+        prev.map((u) => (u.uid === currentUser.uid ? { ...u, sede } : u))
+      );
+      return;
+    }
+    await updateUserSedeDoc(currentUser.uid, sede);
+    setCurrentUser({ ...currentUser, sede });
+  };
+
+  const handleSelectLimClass = (classe: string) => {
+    const nextPath = buildLimClassPath(classe, import.meta.env.BASE_URL);
+    window.history.pushState({}, '', `${nextPath}${window.location.search}`);
+    setLimRoute({ isLimMode: true, limClass: classe });
   };
 
   const handleReportTeacher = async (note: string) => {
@@ -561,6 +709,19 @@ function AppShell() {
     );
   }
 
+  if (limRoute.isLimMode) {
+    return (
+      <LimKioskView
+        limClass={limRoute.limClass}
+        impostazioni={impostazioni}
+        attivita={attivita}
+        convocazioni={convocazioni}
+        partite={partite}
+        onSelectLimClass={handleSelectLimClass}
+      />
+    );
+  }
+
   const statoEvento: StatoEvento = resolveStatoEvento(impostazioni.giornoEvento);
   const activeEventDay = resolveActiveEventDay(statoEvento);
 
@@ -683,6 +844,7 @@ function AppShell() {
             convocazioni={convocazioni}
             partite={partite}
             defaultDay={activeEventDay}
+            onChangeSede={handleChangeTeacherSede}
             onOpenRegulations={() => setRegulationsOpen(true)}
           />
         ) : (
