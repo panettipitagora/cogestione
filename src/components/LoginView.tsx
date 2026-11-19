@@ -9,6 +9,7 @@ import { Footer } from './Footer';
 interface LoginViewProps {
   impostazioni: ImpostazioniEvento;
   onGoogleLogin: () => void;
+  onDirectGoogleLogin?: () => void;
   onSelectDemo: (preset: DemoPresetId) => void;
   authError: string | null;
   isLoading: boolean;
@@ -18,6 +19,7 @@ interface LoginViewProps {
 export const LoginView: React.FC<LoginViewProps> = ({
   impostazioni,
   onGoogleLogin,
+  onDirectGoogleLogin,
   onSelectDemo,
   authError,
   isLoading,
@@ -106,35 +108,48 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={onGoogleLogin}
-                disabled={isLoading || !isFirebaseConfigured}
-                className="w-full min-h-[52px] flex items-center justify-center gap-3 px-5 py-3.5 rounded-xl bg-[#09090B] text-white font-display font-bold text-sm hover:bg-[#18181B] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5500] disabled:opacity-50 transition-colors cursor-pointer"
-              >
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    fill="#EA4335"
-                    d="M12 5c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.09 14.97 0 12 0 7.39 0 3.4 2.66 1.44 6.55l3.66 2.84C6.01 6.72 8.76 5 12 5z"
-                  />
-                  <path
-                    fill="#4285F4"
-                    d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58l3.76 2.91c2.2-2.03 3.66-5.02 3.66-8.73z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.1 14.61c-.24-.72-.38-1.49-.38-2.61s.14-1.89.38-2.61L1.44 6.55C.52 8.38 0 10.13 0 12s.52 3.62 1.44 5.45l3.66-2.84z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.76-2.91c-1.08.72-2.45 1.16-4.17 1.16-3.24 0-5.99-1.72-6.9-4.39l-3.66 2.84C3.4 21.34 7.39 24 12 24z"
-                  />
-                </svg>
-                <span>
-                  {isLoading ? 'Verifica account in corso...' : 'Accedi con Google'}
-                </span>
-                <ArrowRight className="w-4 h-4 text-[#FF5500]" />
-              </button>
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={onGoogleLogin}
+                  disabled={isLoading || !isFirebaseConfigured}
+                  className="w-full min-h-[52px] flex items-center justify-center gap-3 px-5 py-3.5 rounded-xl bg-[#09090B] text-white font-display font-bold text-sm hover:bg-[#18181B] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5500] disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      fill="#EA4335"
+                      d="M12 5c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.09 14.97 0 12 0 7.39 0 3.4 2.66 1.44 6.55l3.66 2.84C6.01 6.72 8.76 5 12 5z"
+                    />
+                    <path
+                      fill="#4285F4"
+                      d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58l3.76 2.91c2.2-2.03 3.66-5.02 3.66-8.73z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.1 14.61c-.24-.72-.38-1.49-.38-2.61s.14-1.89.38-2.61L1.44 6.55C.52 8.38 0 10.13 0 12s.52 3.62 1.44 5.45l3.66-2.84z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.76-2.91c-1.08.72-2.45 1.16-4.17 1.16-3.24 0-5.99-1.72-6.9-4.39l-3.66 2.84C3.4 21.34 7.39 24 12 24z"
+                    />
+                  </svg>
+                  <span>
+                    {isLoading ? 'Verifica account in corso...' : 'Accedi con Google'}
+                  </span>
+                  <ArrowRight className="w-4 h-4 text-[#FF5500]" />
+                </button>
+
+                {onDirectGoogleLogin && (
+                  <button
+                    type="button"
+                    onClick={onDirectGoogleLogin}
+                    disabled={isLoading || !isFirebaseConfigured}
+                    className="w-full min-h-[44px] px-4 py-2.5 rounded-xl border border-zinc-200 bg-[#F8FAFC] hover:border-[#FF5500] hover:bg-[#FFF7F2] text-xs font-display font-bold text-zinc-700 hover:text-[#09090B] disabled:opacity-50 transition-colors cursor-pointer"
+                  >
+                    Sul Wi-Fi scolastico non carica? Usa Accesso Diretto Rete Scolastica
+                  </button>
+                )}
+              </div>
 
               {demoEnabled && <DemoQuickButtons onSelectDemo={onSelectDemo} />}
             </div>

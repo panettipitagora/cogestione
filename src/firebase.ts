@@ -2,7 +2,9 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
+  signInWithCredential,
   type Auth,
+  type UserCredential,
 } from 'firebase/auth';
 import {
   doc,
@@ -18,19 +20,6 @@ import { SCHOOL_DOMAIN } from './data/schoolData';
  * ----------------------------------------------------------------------
  * Questo file utilizza automaticamente la configurazione generata in
  * `firebase-applet-config.json`.
- *
- * Se vuoi collegare un progetto Firebase esterno manuale, sostituisci
- * l'oggetto `firebaseConfig` qui sotto con le chiavi della tua Console Firebase:
- *
- * const manualFirebaseConfig = {
- *   apiKey: "INSERISCI_LA_TUA_API_KEY",
- *   authDomain: "tuo-progetto.firebaseapp.com",
- *   projectId: "tuo-progetto",
- *   storageBucket: "tuo-progetto.firebasestorage.app",
- *   messagingSenderId: "000000000000",
- *   appId: "1:000000000000:web:xxxxxxxxxxxx",
- *   firestoreDatabaseId: "(default)" // oppure ID database dedicato
- * };
  */
 const firebaseConfig = appletFirebaseConfig;
 
@@ -40,6 +29,8 @@ export const isFirebaseConfigured = Boolean(
     firebaseConfig.projectId &&
     !firebaseConfig.projectId.includes('remixed-project-id')
 );
+
+export const googleOAuthClientId = firebaseConfig?.oAuthClientId ?? '';
 
 let app: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
@@ -62,6 +53,126 @@ googleProvider.setCustomParameters({
   hd: SCHOOL_DOMAIN,
   prompt: 'select_account',
 });
+
+interface GoogleOAuthTokenResponse {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+}
+
+interface GoogleGsiGlobal {
+  accounts?: {
+    oauth2?: {
+      initTokenClient: (config: {
+        client_id: string;
+        scope: string;
+        hd?: string;
+        prompt?: string;
+        callback: (resp: GoogleOAuthTokenResponse) => void;
+        error_callback?: (err: { type?: string; message?: string }) => void;
+      }) => {
+        requestAccessToken: (overrideConfig?: { prompt?: string }) => void;
+      };
+    };
+  };
+}
+
+let gsiScriptPromise: Promise<void> | null = null;
+
+function loadGoogleGsiScript(): Promise<void> {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('Ambiente browser non disponibile.'));
+  }
+  const win = window as unknown as { google?: GoogleGsiGlobal };
+  if (win.google?.accounts?.oauth2) {
+    return Promise.resolve();
+  }
+  if (gsiScriptPromise) {
+    return gsiScriptPromise;
+  }
+  gsiScriptPromise = new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[src="https://accounts.google.com/gsi/client"]'
+    );
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener(
+        'error',
+        () => reject(new Error('Impossibile caricare accounts.google.com.')),
+        { once: true }
+      );
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      gsiScriptPromise = null;
+      reject(new Error('Impossibile caricare il servizio di accesso Google.'));
+    };
+    document.head.appendChild(script);
+  });
+  return gsiScriptPromise;
+}
+
+/**
+ * Accesso Google diretto tramite accounts.google.com (senza passare da *.firebaseapp.com),
+ * ideale quando il firewall o filtro DNS della rete scolastica blocca *.firebaseapp.com.
+ */
+export async function signInWithDirectGoogleOAuth(): Promise<UserCredential> {
+  if (!authInstance) {
+    throw new Error('Firebase Auth non è configurato.');
+  }
+  if (!googleOAuthClientId) {
+    throw new Error('Client ID OAuth Google non presente nella configurazione.');
+  }
+
+  await loadGoogleGsiScript();
+
+  const win = window as unknown as { google?: GoogleGsiGlobal };
+  const oauth2 = win.google?.accounts?.oauth2;
+  if (!oauth2) {
+    throw new Error('Modulo Google Identity Services non disponibile.');
+  }
+
+  const accessToken = await new Promise<string>((resolve, reject) => {
+    const client = oauth2.initTokenClient({
+      client_id: googleOAuthClientId,
+      scope: 'openid email profile',
+      hd: SCHOOL_DOMAIN,
+      prompt: 'select_account',
+      callback: (resp) => {
+        if (resp.error || !resp.access_token) {
+          reject(
+            new Error(
+              resp.error_description ||
+                resp.error ||
+                'Accesso Google non completato.'
+            )
+          );
+          return;
+        }
+        resolve(resp.access_token);
+      },
+      error_callback: (err) => {
+        reject(
+          new Error(
+            err?.type === 'popup_closed'
+              ? 'popup-closed-by-user'
+              : err?.message || 'Errore popup Google Identity.'
+          )
+        );
+      },
+    });
+
+    client.requestAccessToken({ prompt: 'select_account' });
+  });
+
+  const credential = GoogleAuthProvider.credential(null, accessToken);
+  return signInWithCredential(authInstance, credential);
+}
 
 export enum OperationType {
   CREATE = 'create',

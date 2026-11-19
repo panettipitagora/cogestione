@@ -12,8 +12,10 @@ import {
 } from './data/mockSeed';
 import {
   auth,
+  googleOAuthClientId,
   googleProvider,
   isFirebaseConfigured,
+  signInWithDirectGoogleOAuth,
   testConnection,
 } from './firebase';
 import { isSuperAdminEmail } from './data/schoolData';
@@ -249,8 +251,48 @@ function AppShell() {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('unauthorized-domain')) {
+        setAuthError(
+          'Dominio non ancora autorizzato in Firebase Authentication → Settings → Authorized domains.'
+        );
+      } else if (message.includes('popup-blocked')) {
+        setAuthError(
+          'Popup bloccato dal browser: consenti i popup per questo sito oppure usa "Accesso Diretto Rete Scolastica".'
+        );
+      } else if (
+        message.includes('network-request-failed') ||
+        message.includes('internal-error') ||
+        message.includes('popup-closed-by-user')
+      ) {
+        setAuthError(
+          'Se la rete Wi-Fi scolastica blocca *.firebaseapp.com ("Impossibile raggiungere il sito"), usa il pulsante "Accesso Diretto Rete Scolastica" qui sotto oppure prova temporaneamente con la rete dati.'
+        );
+      } else {
+        setAuthError(
+          'Accesso Google Workspace non completato. Riprova con @panettipitagora.edu.it o usa Accesso Diretto Rete Scolastica.'
+        );
+      }
+    } finally {
+      setLoginPending(false);
+    }
+  };
+
+  const handleDirectGoogleLogin = async () => {
+    if (!auth) return;
+    setAuthError(null);
+    setLoginPending(true);
+    try {
+      const cred = await signInWithDirectGoogleOAuth();
+      if (!isValidSchoolEmail(cred.user.email)) {
+        await signOut(auth);
+        setAuthError(INVALID_DOMAIN_MSG);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
       if (!message.includes('popup-closed-by-user')) {
-        setAuthError('Accesso Google Workspace non completato. Riprova con @panettipitagora.edu.it.');
+        setAuthError(
+          `Accesso diretto Google non completato (${message}). Verifica che l'URL attuale sia autorizzato in Google Cloud Console → OAuth Client.`
+        );
       }
     } finally {
       setLoginPending(false);
@@ -514,6 +556,7 @@ function AppShell() {
         impostazioni={impostazioni}
         currentUser={currentUser}
         onGoogleLogin={handleGoogleLogin}
+        onDirectGoogleLogin={googleOAuthClientId ? handleDirectGoogleLogin : undefined}
         onSelectDemo={handleSelectDemo}
         onLogout={handleLogout}
         isLoading={loginPending}
@@ -528,6 +571,7 @@ function AppShell() {
       <LoginView
         impostazioni={impostazioni}
         onGoogleLogin={handleGoogleLogin}
+        onDirectGoogleLogin={googleOAuthClientId ? handleDirectGoogleLogin : undefined}
         onSelectDemo={handleSelectDemo}
         authError={authError}
         isLoading={loginPending}

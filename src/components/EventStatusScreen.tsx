@@ -19,6 +19,7 @@ interface EventStatusScreenProps {
   impostazioni: ImpostazioniEvento;
   currentUser: UserProfile | null;
   onGoogleLogin: () => void;
+  onDirectGoogleLogin?: () => void;
   onSelectDemo: (preset: DemoPresetId) => void;
   onLogout: () => void;
   isLoading: boolean;
@@ -31,6 +32,7 @@ export const EventStatusScreen: React.FC<EventStatusScreenProps> = ({
   impostazioni,
   currentUser,
   onGoogleLogin,
+  onDirectGoogleLogin,
   onSelectDemo,
   onLogout,
   isLoading,
@@ -149,7 +151,7 @@ export const EventStatusScreen: React.FC<EventStatusScreenProps> = ({
             </button>
 
             {staffLoginOpen && (
-              <div className="mt-2 bg-white border border-zinc-200 rounded-2xl p-5 space-y-4">
+              <div className="mt-2 bg-white border border-zinc-200 rounded-2xl p-5 space-y-3">
                 {authError && (
                   <p role="alert" className="text-xs font-semibold text-red-600">
                     {authError}
@@ -164,6 +166,17 @@ export const EventStatusScreen: React.FC<EventStatusScreenProps> = ({
                   <span>{isLoading ? 'Verifica...' : 'Accedi con Google'}</span>
                   <ArrowRight className="w-4 h-4 text-[#FF5500]" />
                 </button>
+
+                {onDirectGoogleLogin && (
+                  <button
+                    type="button"
+                    onClick={onDirectGoogleLogin}
+                    disabled={isLoading || !isFirebaseConfigured}
+                    className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-zinc-200 bg-[#F8FAFC] hover:border-[#FF5500] text-xs font-display font-bold text-zinc-700 cursor-pointer"
+                  >
+                    Accesso Diretto Rete Scolastica (senza firebaseapp)
+                  </button>
+                )}
 
                 {demoEnabled && <DemoQuickButtons onSelectDemo={onSelectDemo} />}
               </div>
